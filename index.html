@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>inverted.exe</title>
+
+  <!-- Fonts (matching original) -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+  <!-- Remix Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.0.0/fonts/remixicon.css" rel="stylesheet">
+
+  <link rel="icon" href="image/logo.jpg" />
+  <link rel="canonical" href="https://www.inverted.exe/" />
+
+  <link rel="stylesheet" href="styles.css">
+  <script src="translations.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <button class="burger" aria-label="menu" id="burger">
+      <i class="ri-menu-line burger-menu"></i>
+      <i class="ri-close-line burger-close"></i>
+    </button>
+
+    <nav class="nav-left">
+      <a href="/shop" class="nav-link" data-i18n="shop">shop</a>
+      <a href="/archive" class="nav-link" data-i18n="archive">.archive</a>
+      <a href="/gallery" class="nav-link" data-i18n="gallery">gallery</a>
+      <a href="/inverted.exe" class="nav-link" data-i18n="inverted.exe">inverted.exe</a>
+    </nav>
+
+    <div class="brand">
+      <a href="/"><img src="image/brand.png" alt="inverted.exe" /></a>
+    </div>
+
+    <div class="lang-toggle">
+      <button class="lang-btn active" data-lang="en">ENG</button>
+      <span class="lang-separator">/</span>
+      <button class="lang-btn" data-lang="id">ID</button>
+    </div>
+    
+  </header>
+
+  <main>
+    <!-- LANDING PAGE -->
+    <section class="landing-page">
+      <div class="hero">
+        <div class="bg-image" aria-hidden="true"></div>
+
+        <div class="hero-inner">
+          <div class="text">
+            <h1 data-i18n="coming-soon">// coming soon</h1>
+            <a class="btn" href="/shop" data-i18n="explore">explore</a>
+          </div>
+
+          
+        </div>
+
+        <div class="film-grain" aria-hidden="true"></div>
+      </div>
+
+      <section class="footer landing-footer">
+        <p>© 2025 inverted.exe reserved.</p>
+        <p>Central java, ID.</p>
+      </section>
+    </section>
+  </main>
+
+  <div class="mobile-nav-overlay" id="mobileNav"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>
