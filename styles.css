@@ -208,16 +208,16 @@ main{
 
 .hero .bg-image{
   position:fixed;
-  top:-76px;left:0;right:0;
-  z-index:-1;
+  
+  
   width:100%;
   height:calc(100vh + 76px);
-  background-image:url("https://images.squarespace-cdn.com/content/v1/5d4ce098648a4e0001161410/ce68e5c6-b383-464d-9f6b-447dac0d44e5/bf24_web_background.jpg");
+  background-image:url("../image/banner.png");
   background-size:cover;
   background-position:center;
   background-attachment:fixed;
   filter:brightness(0.35);
-  animation:bgFadeIn 2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+ 
 }
 
 .hero-inner{
@@ -568,7 +568,7 @@ main{
   width:100%;
   height:auto;
   display:block;
-  border-radius:2px;
+  border-radius:20px;
 }
 
 .inverted-exe-right{
@@ -870,4 +870,6 @@ main{
   .archive-grid{grid-template-columns:1fr}
   .gallery-grid{grid-template-columns:repeat(2, 1fr);gap:12px}
   .inverted-exe-content{grid-template-columns:1fr;gap:40px}
+  .footer p{
+  margin:6px 0;margin-left: 12px ;}
 }

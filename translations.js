@@ -7,7 +7,7 @@ const translations = {
     "inverted.exe": "inverted.exe",
     
     // Landing Page
-    "coming-soon": "coming soon",
+    "coming-soon": "coming soon !!!",
     explore: "explore",
     
     // Shop Page
@@ -38,7 +38,7 @@ const translations = {
     
     // Footer
     copyright: "© 2025 inverted.exe reserved.",
-    location: "central java, ID."
+    location: "Central java, ID."
   },
   
   id: {
@@ -49,7 +49,7 @@ const translations = {
     "inverted.exe": "inverted.exe",
     
     // Landing Page
-    "coming-soon": "segera hadir",
+    "coming-soon": "segera hadir !!!",
     explore: "jelajahi",
     
     // Shop Page
