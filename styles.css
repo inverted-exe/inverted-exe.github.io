@@ -44,7 +44,7 @@ body.mobile-nav-open{
 
 .site-header.scrolled{
   background:transparent;
-  border-bottom:none;
+  border-bottom:none; 
   backdrop-filter:none;
 }
 
