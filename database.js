@@ -7,15 +7,15 @@
 // STEP 4: Update the config below with your Firebase project credentials
 
 const firebaseConfig = {
-    apiKey: "AIzaSyDtmMeV16z7fpJxduvojxt88aJq2ySNTxw",
-    authDomain: "inverted-exe-database.firebaseapp.com",
-    databaseURL: "https://inverted-exe-database-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "inverted-exe-database",
-    storageBucket: "inverted-exe-database.firebasestorage.app",
-    messagingSenderId: "454354089986",
-    appId: "1:454354089986:web:94033da6fb5b5d2bf98f1b",
-    measurementId: "G-B9G52RV21Z"
-  };
+  apiKey: "AIzaSyDtmMeV16z7fpJxduvojxt88aJq2ySNTxw",
+  authDomain: "inverted-exe-database.firebaseapp.com",
+  databaseURL: "https://inverted-exe-database-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "inverted-exe-database",
+  storageBucket: "inverted-exe-database.firebasestorage.app",
+  messagingSenderId: "454354089986",
+  appId: "1:454354089986:web:94033da6fb5b5d2bf98f1b",
+  measurementId: "G-B9G52RV21Z"
+};
 
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
