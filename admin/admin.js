@@ -17,6 +17,30 @@ document.addEventListener('DOMContentLoaded', () => {
   displayItems();
 });
 
+// ===== FIREBASE SYNC FUNCTION =====
+// Save data to both localStorage and Firebase
+async function saveAdminData(newData) {
+  try {
+    // Save to localStorage
+    localStorage.setItem('inverted_admin_data', JSON.stringify(newData));
+    console.log('Data saved to localStorage');
+
+    // Save to Firebase if available
+    if (typeof DatabaseSync !== 'undefined') {
+      console.log('Syncing to Firebase...');
+      const result = await DatabaseSync.save(newData, true);
+      console.log('Firebase sync result:', result);
+      return result;
+    } else {
+      console.warn('DatabaseSync not available, data only saved to localStorage');
+      return true;
+    }
+  } catch (error) {
+    console.error('Error saving admin data:', error);
+    return false;
+  }
+}
+
 // Initialize admin burger menu
 function initializeAdminBurger() {
   const adminBurger = document.getElementById('adminBurger');
@@ -137,7 +161,7 @@ function handleSubmit(event, type) {
           if (loadedCount === totalFiles) {
             item.image = item.images[0]; // Set first image as thumbnail
             adminData.shop.push(item);
-            localStorage.setItem('inverted_admin_data', JSON.stringify(adminData));
+            saveAdminData(adminData);
             form.reset();
             displayItems();
             showNotification('Product saved successfully!', 'success');
@@ -169,7 +193,7 @@ function handleSubmit(event, type) {
           if (loadedCount === totalFiles) {
             item.image = item.images[0];
             adminData.archive.push(item);
-            localStorage.setItem('inverted_admin_data', JSON.stringify(adminData));
+            saveAdminData(adminData);
             form.reset();
             displayItems();
             showNotification('Archive saved successfully!', 'success');
@@ -200,7 +224,7 @@ function handleSubmit(event, type) {
           if (loadedCount === totalFiles) {
             item.image = item.images[0];
             adminData.gallery.push(item);
-            localStorage.setItem('inverted_admin_data', JSON.stringify(adminData));
+            saveAdminData(adminData);
             form.reset();
             displayItems();
             showNotification('Image saved successfully!', 'success');
@@ -214,8 +238,8 @@ function handleSubmit(event, type) {
     }
   }
 
-  // Save to localStorage
-  localStorage.setItem('inverted_admin_data', JSON.stringify(adminData));
+  // Save to localStorage and Firebase
+  saveAdminData(adminData);
 
   // Clear form
   form.reset();
@@ -378,7 +402,7 @@ function handleModalSubmit(event) {
     adminData[type][itemIndex].description = formInputs[1].value;
   }
 
-  localStorage.setItem('inverted_admin_data', JSON.stringify(adminData));
+  saveAdminData(adminData);
   closeModal();
   displayItems();
   showNotification('Item updated successfully!', 'success');
@@ -388,7 +412,7 @@ function handleModalSubmit(event) {
 function deleteItemFromList(type, id) {
   if (confirm('Are you sure you want to delete this item?')) {
     adminData[type] = adminData[type].filter(i => i.id !== id);
-    localStorage.setItem('inverted_admin_data', JSON.stringify(adminData));
+    saveAdminData(adminData);
     displayItems();
     showNotification('Item deleted!', 'success');
   }
@@ -444,7 +468,7 @@ function importData(file) {
       const imported = JSON.parse(e.target.result);
       if (confirm('This will replace all current data. Continue?')) {
         adminData = imported;
-        localStorage.setItem('inverted_admin_data', JSON.stringify(adminData));
+        saveAdminData(adminData);
         displayItems();
         showNotification('Data imported successfully!', 'success');
       }
