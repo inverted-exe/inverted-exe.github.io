@@ -32,11 +32,15 @@ const DatabaseSync = {
       }
       
       const db = firebase.database();
-      db.ref('content').once('value').then((snapshot) => {
+      // Use 'on' untuk real-time listening, bukan 'once'
+      db.ref('content').on('value', (snapshot) => {
         const data = snapshot.val() || { shop: [], archive: [], gallery: [] };
+        console.log('Data from Firebase:', data);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
         localStorage.setItem(STORAGE_LAST_SYNC, new Date().toISOString());
-        console.log('Data synced from Firebase');
+        console.log('Data synced from Firebase (real-time)');
+      }, (error) => {
+        console.error('Error reading from Firebase:', error);
       });
     } catch (error) {
       console.error('Error syncing from Firebase:', error);
@@ -88,6 +92,9 @@ const DatabaseSync = {
       const db = firebase.database();
       await db.ref('content').set(data);
       console.log('Data saved to Firebase');
+      // Update localStorage setelah berhasil save
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      localStorage.setItem(STORAGE_LAST_SYNC, new Date().toISOString());
       return true;
     } catch (error) {
       console.error('Error saving to Firebase:', error);

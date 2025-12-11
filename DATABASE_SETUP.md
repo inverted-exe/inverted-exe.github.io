@@ -241,15 +241,64 @@ async function initializeAdminData() {
 
 ## Troubleshooting
 
-### Data tidak muncul di halaman publik:
-1. Cek Console (F12) untuk error messages
-2. Pastikan `database-sync.js` di-load
-3. Pastikan Firebase/GitHub config benar
-4. Cek localStorage: `localStorage.getItem('inverted_admin_data')`
+### ❌ Data hanya muncul di device yang upload, tidak di device lain:
+
+**Masalah:** Admin panel tidak tersimpan ke Firebase, hanya di localStorage lokal.
+
+**Solusi:**
+
+1. **Pastikan Firebase Scripts dimuat:**
+   - Buka F12 → Console
+   - Ketik: `firebase` (tekan Enter)
+   - Jika undefined, berarti Firebase belum ter-load
+
+2. **Cek Firebase Config:**
+   - Buka file `/database.js`
+   - Pastikan config sudah diupdate dengan nilai dari Firebase
+   - Jangan gunakan placeholder seperti "YOUR_API_KEY"
+
+3. **Cek Firebase Rules:**
+   - Buka https://console.firebase.google.com/
+   - Pilih project Anda
+   - Klik "Realtime Database" → "Rules"
+   - Pastikan rules memungkinkan read:
+   ```json
+   {
+     "rules": {
+       "content": {
+         ".read": true,
+         ".write": false
+       }
+     }
+   }
+   ```
+
+4. **Test Firebase Connection:**
+   - Buka admin panel (F12 → Console)
+   - Ketik: `firebase.database()` (tekan Enter)
+   - Seharusnya return Database object, bukan error
+
+5. **Cek Admin Panel Save:**
+   - Upload item dari admin panel
+   - Buka Console → ketik: `localStorage.getItem('inverted_admin_data')` (Enter)
+   - Seharusnya menampilkan data yang baru diupload
+
+6. **Cek Firebase Dashboard:**
+   - Buka https://console.firebase.google.com/
+   - Pilih project
+   - Klik "Realtime Database"
+   - Lihat apakah ada "content" node dengan data
+
+7. **Jika masih tidak sync:**
+   - Clear localStorage: Buka Console → `localStorage.clear()`
+   - Refresh halaman (F5)
+   - Upload item lagi
+   - Cek Firebase dashboard apakah data tersimpan
 
 ### Firebase error "Permission denied":
 1. Update Rules di Realtime Database
 2. Pastikan mode tidak "Locked Mode"
+3. Tunggu beberapa detik setelah publish rules
 
 ### GitHub API error:
 1. Cek GitHub token valid

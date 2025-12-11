@@ -91,11 +91,20 @@ function displayGalleryImages() {
 }
 
 async function initializeAdminData() {
-  await DatabaseSync.init(useFirebase); // sync data terlebih dahulu
+  console.log('Initializing data loader...');
+  // Tunggu Firebase sync terlebih dahulu
+  if (typeof DatabaseSync !== 'undefined') {
+    await DatabaseSync.init(true); // true untuk menggunakan Firebase
+  }
+  
+  // Tunggu localStorage ter-update dari Firebase
+  await new Promise(resolve => setTimeout(resolve, 500));
+  
   displayShopItems();
   displayArchiveItems();
   displayGalleryImages();
   setupImageLightbox();
+  console.log('Data initialization complete');
 }
 
 // Simple image lightbox for archive
