@@ -7,6 +7,9 @@ const STORAGE_LAST_SYNC = 'inverted_last_sync';
 
 // Main database interface
 const DatabaseSync = {
+  // Store reference untuk listener (agar bisa detach)
+  firebaseListener: null,
+
   // Initialize database
   init: async (useFirebase = false) => {
     console.log('Initializing database system...');
@@ -33,7 +36,7 @@ const DatabaseSync = {
       
       const db = firebase.database();
       // Use 'on' untuk real-time listening, bukan 'once'
-      db.ref('content').on('value', (snapshot) => {
+      DatabaseSync.firebaseListener = db.ref('content').on('value', (snapshot) => {
         const data = snapshot.val() || { shop: [], archive: [], gallery: [] };
         console.log('Data from Firebase:', data);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
@@ -90,14 +93,34 @@ const DatabaseSync = {
       }
       
       const db = firebase.database();
+      
+      // Temporarily detach listener to prevent overwrite during save
+      if (DatabaseSync.firebaseListener) {
+        db.ref('content').off('value', DatabaseSync.firebaseListener);
+        console.log('Detached Firebase listener temporarily');
+      }
+      
+      // Save to Firebase
       await db.ref('content').set(data);
       console.log('Data saved to Firebase');
-      // Update localStorage setelah berhasil save
+      
+      // Update localStorage
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
       localStorage.setItem(STORAGE_LAST_SYNC, new Date().toISOString());
+      
+      // Re-attach listener after save
+      setTimeout(() => {
+        DatabaseSync.syncFromFirebase();
+        console.log('Re-attached Firebase listener after save');
+      }, 500); // Wait 500ms to ensure Firebase has processed the write
+      
       return true;
     } catch (error) {
       console.error('Error saving to Firebase:', error);
+      // Try to re-attach listener even on error
+      setTimeout(() => {
+        DatabaseSync.syncFromFirebase();
+      }, 500);
       return false;
     }
   },
