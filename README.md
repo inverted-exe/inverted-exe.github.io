@@ -1,6 +1,6 @@
-# My HTML Project
+# Minimalist website for create brand
 
-This is a simple HTML project that demonstrates the use of HTML and CSS to create a basic webpage.
+This is a simple web project that demonstrates the use of HTML and CSS to create a basic webpage.
 
 ## Project Structure
 
