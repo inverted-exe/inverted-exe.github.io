@@ -18,23 +18,28 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ===== FIREBASE SYNC FUNCTION =====
-// Save data to both localStorage and Firebase
+// Save data to Firebase (which also syncs to localStorage)
 async function saveAdminData(newData) {
   try {
-    // Save to localStorage
-    localStorage.setItem('inverted_admin_data', JSON.stringify(newData));
-    console.log('Data saved to localStorage');
-
-    // Save to Firebase if available
-    if (typeof DatabaseSync !== 'undefined') {
-      console.log('Syncing to Firebase...');
-      const result = await DatabaseSync.save(newData, true);
-      console.log('Firebase sync result:', result);
-      return result;
-    } else {
-      console.warn('DatabaseSync not available, data only saved to localStorage');
-      return true;
+    // Check if DatabaseSync is available
+    if (typeof DatabaseSync === 'undefined') {
+      console.warn('DatabaseSync not available, saving to localStorage only');
+      localStorage.setItem('inverted_admin_data', JSON.stringify(newData));
+      return false;
     }
+
+    // Check if Firebase is available
+    if (typeof firebase === 'undefined') {
+      console.warn('Firebase not initialized, saving to localStorage only');
+      localStorage.setItem('inverted_admin_data', JSON.stringify(newData));
+      return false;
+    }
+
+    console.log('Saving data to Firebase...');
+    // Use DatabaseSync.save with Firebase enabled (true)
+    const result = await DatabaseSync.save(newData, true);
+    console.log('Firebase save result:', result);
+    return result;
   } catch (error) {
     console.error('Error saving admin data:', error);
     return false;
@@ -127,7 +132,7 @@ function switchSection(section) {
 }
 
 // Handle form submission
-function handleSubmit(event, type) {
+async function handleSubmit(event, type) {
   event.preventDefault();
 
   const form = event.target;
@@ -151,25 +156,28 @@ function handleSubmit(event, type) {
       let loadedCount = 0;
       const totalFiles = imageInput.files.length;
 
-      Array.from(imageInput.files).forEach((file, index) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          item.images.push(e.target.result);
-          loadedCount++;
+      return new Promise((resolve) => {
+        Array.from(imageInput.files).forEach((file, index) => {
+          const reader = new FileReader();
+          reader.onload = async (e) => {
+            item.images.push(e.target.result);
+            loadedCount++;
 
-          // When all images loaded
-          if (loadedCount === totalFiles) {
-            item.image = item.images[0]; // Set first image as thumbnail
-            adminData.shop.push(item);
-            saveAdminData(adminData);
-            form.reset();
-            displayItems();
-            showNotification('Product saved successfully!', 'success');
-          }
-        };
-        reader.readAsDataURL(file);
+            // When all images loaded
+            if (loadedCount === totalFiles) {
+              item.image = item.images[0]; // Set first image as thumbnail
+              adminData.shop.push(item);
+              // Wait for Firebase sync to complete
+              await saveAdminData(adminData);
+              form.reset();
+              displayItems();
+              showNotification('Product saved successfully!', 'success');
+              resolve();
+            }
+          };
+          reader.readAsDataURL(file);
+        });
       });
-      return;
     } else {
       adminData.shop.push(item);
     }
@@ -184,24 +192,26 @@ function handleSubmit(event, type) {
       let loadedCount = 0;
       const totalFiles = imageInput.files.length;
 
-      Array.from(imageInput.files).forEach((file) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          item.images.push(e.target.result);
-          loadedCount++;
+      return new Promise((resolve) => {
+        Array.from(imageInput.files).forEach((file) => {
+          const reader = new FileReader();
+          reader.onload = async (e) => {
+            item.images.push(e.target.result);
+            loadedCount++;
 
-          if (loadedCount === totalFiles) {
-            item.image = item.images[0];
-            adminData.archive.push(item);
-            saveAdminData(adminData);
-            form.reset();
-            displayItems();
-            showNotification('Archive saved successfully!', 'success');
-          }
-        };
-        reader.readAsDataURL(file);
+            if (loadedCount === totalFiles) {
+              item.image = item.images[0];
+              adminData.archive.push(item);
+              await saveAdminData(adminData);
+              form.reset();
+              displayItems();
+              showNotification('Archive saved successfully!', 'success');
+              resolve();
+            }
+          };
+          reader.readAsDataURL(file);
+        });
       });
-      return;
     } else {
       adminData.archive.push(item);
     }
@@ -215,31 +225,33 @@ function handleSubmit(event, type) {
       let loadedCount = 0;
       const totalFiles = imageInput.files.length;
 
-      Array.from(imageInput.files).forEach((file) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          item.images.push(e.target.result);
-          loadedCount++;
+      return new Promise((resolve) => {
+        Array.from(imageInput.files).forEach((file) => {
+          const reader = new FileReader();
+          reader.onload = async (e) => {
+            item.images.push(e.target.result);
+            loadedCount++;
 
-          if (loadedCount === totalFiles) {
-            item.image = item.images[0];
-            adminData.gallery.push(item);
-            saveAdminData(adminData);
-            form.reset();
-            displayItems();
-            showNotification('Image saved successfully!', 'success');
-          }
-        };
-        reader.readAsDataURL(file);
+            if (loadedCount === totalFiles) {
+              item.image = item.images[0];
+              adminData.gallery.push(item);
+              await saveAdminData(adminData);
+              form.reset();
+              displayItems();
+              showNotification('Image saved successfully!', 'success');
+              resolve();
+            }
+          };
+          reader.readAsDataURL(file);
+        });
       });
-      return;
     } else {
       adminData.gallery.push(item);
     }
   }
 
   // Save to localStorage and Firebase
-  saveAdminData(adminData);
+  await saveAdminData(adminData);
 
   // Clear form
   form.reset();
@@ -378,7 +390,7 @@ function editItem(type, id) {
 }
 
 // Handle modal form submit
-function handleModalSubmit(event) {
+async function handleModalSubmit(event) {
   event.preventDefault();
 
   if (!window.currentEditingItem) return;
@@ -402,17 +414,17 @@ function handleModalSubmit(event) {
     adminData[type][itemIndex].description = formInputs[1].value;
   }
 
-  saveAdminData(adminData);
+  await saveAdminData(adminData);
   closeModal();
   displayItems();
   showNotification('Item updated successfully!', 'success');
 }
 
 // Delete item from list
-function deleteItemFromList(type, id) {
+async function deleteItemFromList(type, id) {
   if (confirm('Are you sure you want to delete this item?')) {
     adminData[type] = adminData[type].filter(i => i.id !== id);
-    saveAdminData(adminData);
+    await saveAdminData(adminData);
     displayItems();
     showNotification('Item deleted!', 'success');
   }
@@ -463,12 +475,12 @@ function exportData() {
 // Import data
 function importData(file) {
   const reader = new FileReader();
-  reader.onload = (e) => {
+  reader.onload = async (e) => {
     try {
       const imported = JSON.parse(e.target.result);
       if (confirm('This will replace all current data. Continue?')) {
         adminData = imported;
-        saveAdminData(adminData);
+        await saveAdminData(adminData);
         displayItems();
         showNotification('Data imported successfully!', 'success');
       }
