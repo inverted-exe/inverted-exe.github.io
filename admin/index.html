@@ -95,37 +95,13 @@
         <!-- ARCHIVE Section -->
         <section id="archive" class="admin-section">
           <div class="section-header">
-            <h2>Archive Items</h2>
-            <button class="btn btn-primary" onclick="addNewItem('archive')">
-              <i class="ri-add-line"></i> Add Archive
-            </button>
-          </div>
-
-          <div class="form-group">
-            <label>Add New Archive Item</label>
-            <form class="admin-form" id="archiveForm" onsubmit="handleSubmit(event, 'archive')">
-              <div class="form-row">
-                <input type="text" name="title" placeholder="Title" class="form-input" required>
-                <input type="text" name="category" placeholder="Category" class="form-input" required>
-              </div>
-              <textarea name="description" placeholder="Archive Description" class="form-textarea" required></textarea>
-              
-              <div class="form-row">
-                <div class="file-input-wrapper">
-                  <label>Images (Multiple)</label>
-                  <input type="file" accept="image/*" multiple class="form-file" required>
-                  <small>Upload 1+ images</small>
-                </div>
-              </div>
-
-              <button type="submit" class="btn btn-success">Save Archive</button>
-            </form>
+            <h2>Archived Items</h2>
           </div>
 
           <div class="items-list">
-            <h3>Current Archives</h3>
+            <h3>Archived Items</h3>
             <div id="archiveItems" class="items-grid">
-              <p class="empty-state">No archive items yet.</p>
+              <p class="empty-state">No archived items yet.</p>
             </div>
           </div>
         </section>
@@ -140,18 +116,15 @@
           </div>
 
           <div class="form-group">
-            <label>Upload Gallery Image</label>
+            <label>Upload Gallery Images</label>
             <form class="admin-form" id="galleryForm" onsubmit="handleSubmit(event, 'gallery')">
-              <input type="text" name="title" placeholder="Image Title" class="form-input" required>
-              <textarea name="description" placeholder="Image Description" class="form-textarea"></textarea>
-              
               <div class="file-input-wrapper">
-                <label>Gallery Images (Multiple)</label>
+                <label>Select Images (Multiple)</label>
                 <input type="file" accept="image/*" multiple class="form-file" required>
                 <small>Upload 1+ images</small>
               </div>
 
-              <button type="submit" class="btn btn-success">Upload Image</button>
+              <button type="submit" class="btn btn-success">Upload Images</button>
             </form>
           </div>
 

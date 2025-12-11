@@ -255,8 +255,9 @@ async function handleSubmit(event, type) {
       item.category = formData.get('category');
       item.description = formData.get('description');
     } else if (type === 'gallery') {
-      item.title = formData.get('title');
-      item.description = formData.get('description');
+      // Gallery only needs images, no title/description
+      item.title = `Image ${Date.now()}`;
+      item.description = '';
     }
 
     // Process images with compression
@@ -335,6 +336,7 @@ function displayShopItems() {
         </div>
         <div class="item-actions">
           <button class="btn btn-secondary" onclick="editItem('shop', ${item.id})">Edit</button>
+          <button class="btn btn-warning" onclick="archiveItem('shop', ${item.id})">Archive</button>
           <button class="btn btn-danger" onclick="deleteItemFromList('shop', ${item.id})">Delete</button>
         </div>
       </div>
@@ -356,13 +358,14 @@ function displayArchiveItems() {
       ${item.image ? `<img src="${item.image}" alt="${item.title}" class="item-image">` : '<div class="item-image" style="background: rgba(255,255,255,0.1)"></div>'}
       <div class="item-info">
         <div class="item-title">${item.title}</div>
-        <div class="item-description">${item.category}</div>
+        <div class="item-description">${item.category || item.description}</div>
         <div class="item-meta">
-          <span>${item.category}</span>
+          <span>${item.category || 'Archived'}</span>
           <span>${new Date(item.createdAt).toLocaleDateString()}</span>
         </div>
         <div class="item-actions">
           <button class="btn btn-secondary" onclick="editItem('archive', ${item.id})">Edit</button>
+          <button class="btn btn-success" onclick="unarchiveItem(${item.id})">Unarchive to Shop</button>
           <button class="btn btn-danger" onclick="deleteItemFromList('archive', ${item.id})">Delete</button>
         </div>
       </div>
@@ -471,6 +474,79 @@ async function deleteItemFromList(type, id) {
     await saveAdminData(adminData);
     displayItems();
     showNotification('Item deleted!', 'success');
+  }
+}
+
+// Archive shop item (move to archive)
+async function archiveItem(type, id) {
+  if (confirm('Move this item to archive?')) {
+    // Find the item in shop
+    const itemIndex = adminData[type].findIndex(i => i.id === id);
+    if (itemIndex === -1) return;
+    
+    const item = adminData[type][itemIndex];
+    
+    // Convert shop item to archive format
+    const archivedItem = {
+      id: item.id,
+      type: 'archive',
+      title: item.name,
+      category: 'Shop Archive',
+      description: item.description,
+      image: item.image,
+      images: item.images,
+      price: item.price, // Keep price info
+      createdAt: item.createdAt,
+      archivedAt: new Date().toISOString()
+    };
+    
+    // Remove from shop
+    adminData.shop = adminData.shop.filter(i => i.id !== id);
+    
+    // Add to archive
+    if (!Array.isArray(adminData.archive)) adminData.archive = [];
+    adminData.archive.push(archivedItem);
+    
+    // Save to Firebase
+    await saveAdminData(adminData);
+    displayItems();
+    showNotification('Item archived successfully!', 'success');
+  }
+}
+
+// Unarchive item (move back to shop)
+async function unarchiveItem(id) {
+  if (confirm('Move this item back to shop?')) {
+    // Find the item in archive
+    const itemIndex = adminData.archive.findIndex(i => i.id === id);
+    if (itemIndex === -1) return;
+    
+    const item = adminData.archive[itemIndex];
+    
+    // Convert archive item back to shop format
+    const shopItem = {
+      id: item.id,
+      type: 'shop',
+      name: item.title,
+      description: item.description,
+      image: item.image,
+      images: item.images,
+      price: item.price || 0,
+      createdAt: item.createdAt,
+      unarchivedAt: new Date().toISOString()
+    };
+    
+    // Remove from archive
+    adminData.archive = adminData.archive.filter(i => i.id !== id);
+    
+    // Add back to shop
+    if (!Array.isArray(adminData.shop)) adminData.shop = [];
+    adminData.shop.push(shopItem);
+    
+    // Save to Firebase
+    await saveAdminData(adminData);
+    displayItems();
+    showNotification('Item restored to shop!', 'success');
   }
 }
 

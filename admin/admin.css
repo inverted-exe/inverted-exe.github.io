@@ -385,6 +385,26 @@ body {
   background: rgba(255, 68, 68, 0.15);
 }
 
+.btn-warning {
+  background: rgba(255, 193, 7, 0.1);
+  color: #ffc107;
+  border: 1px solid rgba(255, 193, 7, 0.3);
+}
+
+.btn-warning:hover {
+  background: rgba(255, 193, 7, 0.15);
+}
+
+.btn-success {
+  background: rgba(76, 175, 80, 0.1);
+  color: #4caf50;
+  border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.btn-success:hover {
+  background: rgba(76, 175, 80, 0.15);
+}
+
 /* Items List */
 .items-list {
   background: var(--bg-secondary);

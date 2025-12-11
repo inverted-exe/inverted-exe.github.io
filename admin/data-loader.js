@@ -66,26 +66,49 @@ function displayArchiveItems() {
     archiveContainer.setAttribute('data-paginated', 'true');
   }
 
-  archiveContainer.innerHTML = adminData.archive.map((item, idx) => `
-    <div class="archive-item" data-item="${idx}" onclick="openImageLightbox('${item.images ? item.images[0] : item.image}', '${item.title}')" style="cursor:pointer;">
-      <div class="archive-image">
-        ${item.image ? `
-          <img 
-            ${idx < 12 ? `src="${item.image}"` : `data-src="${item.image}"`}
-            alt="${item.title}"
-            loading="lazy"
-            class="archive-item-img"
-          >
-        ` : '<div style="background: rgba(255,255,255,0.1); height: 100%"></div>'}
+  // Check if it's simple layout (public archive page)
+  const isSimpleLayout = archiveContainer.classList.contains('archive-simple');
+  
+  if (isSimpleLayout) {
+    // Display like shop items with gray styling
+    archiveContainer.innerHTML = adminData.archive.map((item, idx) => `
+      <div class="archive-item-simple" data-item="${idx}">
+        <div class="archive-image-simple">
+          ${item.image ? `
+            <img 
+              ${idx < 12 ? `src="${item.image}"` : `data-src="${item.image}"`}
+              alt="${item.title}" 
+              loading="lazy"
+              class="archive-item-img"
+            >
+          ` : '<div style="background: rgba(255,255,255,0.1); height: 100%"></div>'}
+        </div>
+        <h3 class="archive-item-title">${item.title}</h3>
       </div>
-      <div class="archive-info">
-        <h3>${item.title}</h3>
-        <p class="archive-category">${item.category}</p>
-        <p>${item.description}</p>
-        <time>${new Date(item.createdAt).toLocaleDateString()}</time>
+    `).join('');
+  } else {
+    // Admin panel detailed layout
+    archiveContainer.innerHTML = adminData.archive.map((item, idx) => `
+      <div class="archive-item" data-item="${idx}" onclick="openImageLightbox('${item.images ? item.images[0] : item.image}', '${item.title}')" style="cursor:pointer;">
+        <div class="archive-image">
+          ${item.image ? `
+            <img 
+              ${idx < 12 ? `src="${item.image}"` : `data-src="${item.image}"`}
+              alt="${item.title}"
+              loading="lazy"
+              class="archive-item-img"
+            >
+          ` : '<div style="background: rgba(255,255,255,0.1); height: 100%"></div>'}
+        </div>
+        <div class="archive-info">
+          <h3>${item.title}</h3>
+          <p class="archive-category">${item.category}</p>
+          <p>${item.description}</p>
+          <time>${new Date(item.createdAt).toLocaleDateString()}</time>
+        </div>
       </div>
-    </div>
-  `).join('');
+    `).join('');
+  }
 
   // Setup lazy loading and pagination
   PerformanceManager.setupLazyLoading();

@@ -1398,6 +1398,62 @@ main{
   margin-top:4px;
 }
 
+/* Archive Simple Layout (Public Page) */
+.archive-simple{
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(200px, 1fr));
+  gap:16px;
+}
+
+.archive-item-simple{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  text-decoration:none;
+  transition:all 0.3s ease;
+}
+
+.archive-item-simple:hover{
+  transform:translateY(-4px);
+}
+
+.archive-image-simple{
+  width:100%;
+  aspect-ratio:1;
+  background:#0a0a0a;
+  border-radius:2px;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,0.08);
+}
+
+.archive-image-simple img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  transition:transform 0.3s ease, filter 0.3s ease;
+  filter:grayscale(100%) brightness(0.85);
+}
+
+.archive-item-simple:hover .archive-image-simple img{
+  transform:scale(1.05);
+  filter:grayscale(80%) brightness(0.95);
+}
+
+.archive-item-title{
+  font-size:14px;
+  font-weight:600;
+  margin:0;
+  text-transform:lowercase;
+  letter-spacing:0.05em;
+  color:rgba(255,255,255,0.7);
+  transition:color 0.2s;
+  text-align:center;
+}
+
+.archive-item-simple:hover .archive-item-title{
+  color:rgba(255,255,255,0.9);
+}
+
 /* gallery page */
 .gallery-page{
   display:block !important;
