@@ -9,11 +9,18 @@ let adminData = JSON.parse(localStorage.getItem('inverted_admin_data')) || {
 
 // Initialize admin panel
 document.addEventListener('DOMContentLoaded', () => {
-  checkAdmin();
-  initializeEventListeners();
-  initializeAdminBurger();
-  loadAllItems();
-  displayItems();
+  // Wait untuk Firebase initialize
+  const checkFirebase = setInterval(() => {
+    if (typeof firebase !== 'undefined' && typeof DatabaseSync !== 'undefined') {
+      clearInterval(checkFirebase);
+      console.log('Firebase initialized, loading admin...');
+      checkAdmin();
+      initializeEventListeners();
+      initializeAdminBurger();
+      loadAllItems();
+      displayItems();
+    }
+  }, 100);
 });
 
 // ===== FIREBASE SYNC FUNCTION =====

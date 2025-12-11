@@ -10,11 +10,6 @@
   
   <link rel="stylesheet" href="admin.css">
 
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js"></script>
-  <script src="../database.js"></script>
-  <script src="../database-sync.js"></script>
 </head>
 <body>
   <div class="admin-container">
@@ -189,6 +184,13 @@
     </div>
   </div>
 
+  <!-- Firebase Scripts (HARUS sebelum admin.js) -->
+  <script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js"></script>
+  <script src="../database.js"></script>
+  <script src="../database-sync.js"></script>
+
+  <!-- Admin Scripts -->
   <script src="admin.js"></script>
   <script src="firebase-admin-sync.js"></script>
 </body>
