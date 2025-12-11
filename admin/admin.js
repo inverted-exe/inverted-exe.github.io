@@ -4,8 +4,7 @@
 let adminData = JSON.parse(localStorage.getItem('inverted_admin_data')) || {
   shop: [],
   archive: [],
-  gallery: [],
-  invertedExe: {}
+  gallery: []
 };
 
 // Initialize admin panel

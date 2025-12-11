@@ -38,12 +38,28 @@ Anda dapat memilih salah satu dari tiga opsi:
      "rules": {
        "content": {
          ".read": true,
-         ".write": false
+         ".write": true
        }
      }
    }
    ```
    - Klik "Publish"
+   - Tunggu sampai ada notifikasi "Rules Published"
+
+4. **Initialize Database Node:**
+   - Di Realtime Database, klik tab "Data"
+   - Klik icon **"+"** untuk add data baru
+   - **Key:** `content`
+   - **Value:** Copy-paste ini:
+   ```json
+   {
+     "shop": [],
+     "archive": [],
+     "gallery": []
+   }
+   ```
+   - Klik "Add"
+   - Sekarang Anda akan lihat node `content` dengan 3 empty arrays
 
 4. **Ambil Firebase Config:**
    - Klik gear icon (⚙️) di kiri atas → "Project Settings"
