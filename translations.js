@@ -13,6 +13,7 @@ const translations = {
     // Shop Page
     "shop-header": "shop",
     "shop-subtitle": "latest & greatest",
+    "shop-intro": "Discover our curated collection of digital and physical products",
     
     // Archive Page
     "archive-header": "archive",
@@ -21,6 +22,13 @@ const translations = {
     // Gallery Page
     "gallery-header": "gallery",
     "gallery-subtitle": "visual stories",
+    
+    // Product Detail
+    "back-to-shop": "Back to Shop",
+    "order-now": "Order Now",
+    "add-to-cart": "Add to Cart",
+    description: "Description",
+    price: "Price",
     
     // Inverted.exe Page
     "about-us": "about us",
@@ -55,6 +63,7 @@ const translations = {
     // Shop Page
     "shop-header": "toko",
     "shop-subtitle": "terbaru & terbaik",
+    "shop-intro": "Temukan koleksi pilihan kami dari produk digital dan fisik",
     
     // Archive Page
     "archive-header": "arsip",
@@ -63,6 +72,13 @@ const translations = {
     // Gallery Page
     "gallery-header": "galeri",
     "gallery-subtitle": "cerita visual",
+    
+    // Product Detail
+    "back-to-shop": "Kembali ke Toko",
+    "order-now": "Pesan Sekarang",
+    "add-to-cart": "Tambah ke Keranjang",
+    description: "Deskripsi",
+    price: "Harga",
     
     // Inverted.exe Page
     "about-us": "tentang kami",

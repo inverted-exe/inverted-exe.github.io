@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>inverted.exe - Admin Panel</title>
+  
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.0.0/fonts/remixicon.css" rel="stylesheet">
+  
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+  <div class="admin-container">
+    <!-- Sidebar Toggle Burger (Mobile) -->
+    <button class="admin-burger" aria-label="toggle sidebar" id="adminBurger">
+      <i class="ri-menu-line"></i>
+      <i class="ri-close-line"></i>
+    </button>
+
+    <!-- Sidebar -->
+    <aside class="admin-sidebar">
+      <div class="admin-logo">
+        <h2></h2>
+      </div>
+      
+      <nav class="admin-nav">
+        <a href="#shop" class="admin-nav-link active" data-section="shop">
+          <i class="ri-shopping-bag-line"></i> <span class="nav-text">Shop</span>
+        </a>
+        <a href="#archive" class="admin-nav-link" data-section="archive">
+          <i class="ri-archive-drawer-line"></i> <span class="nav-text">Archive</span>
+        </a>
+        <a href="#gallery" class="admin-nav-link" data-section="gallery">
+          <i class="ri-gallery-line"></i> <span class="nav-text">Gallery</span>
+        </a>
+      </nav>
+
+      <div class="admin-footer">
+        <button class="btn-logout" onclick="logout()">
+          <i class="ri-logout-box-line"></i> <span class="nav-text">Logout</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="admin-main">
+      <header class="admin-header">
+        <h1>Content Management</h1>
+        <div class="admin-user">
+          <span>Welcome, Admin</span>
+          <i class="ri-user-3-line"></i>
+        </div>
+      </header>
+
+      <div class="admin-content">
+        <!-- SHOP Section -->
+        <section id="shop" class="admin-section active">
+          <div class="section-header">
+            <h2>Shop Items</h2>
+            <button class="btn btn-primary" onclick="addNewItem('shop')">
+              <i class="ri-add-line"></i> Add Item
+            </button>
+          </div>
+
+          <div class="form-group">
+            <label>Add New Product</label>
+            <form class="admin-form" id="shopForm" onsubmit="handleSubmit(event, 'shop')">
+              <div class="form-row">
+                <input type="text" placeholder="Product Name" class="form-input" required>
+                <input type="number" placeholder="Price" class="form-input" required>
+              </div>
+              <textarea placeholder="Product Description" class="form-textarea" required></textarea>
+              
+              <div class="file-input-wrapper">
+                <label>Product Images (Multiple)</label>
+                <input type="file" accept="image/*" multiple class="form-file" id="shopImages" required>
+                <small>Upload 1+ images. First image will be shown in grid, others in preview</small>
+              </div>
+
+              <button type="submit" class="btn btn-success">Save Product</button>
+            </form>
+          </div>
+
+          <div class="items-list">
+            <h3>Current Products</h3>
+            <div id="shopItems" class="items-grid">
+              <!-- Items akan dimuat dari data -->
+              <p class="empty-state">No items yet. Add your first product!</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- ARCHIVE Section -->
+        <section id="archive" class="admin-section">
+          <div class="section-header">
+            <h2>Archive Items</h2>
+            <button class="btn btn-primary" onclick="addNewItem('archive')">
+              <i class="ri-add-line"></i> Add Archive
+            </button>
+          </div>
+
+          <div class="form-group">
+            <label>Add New Archive Item</label>
+            <form class="admin-form" id="archiveForm" onsubmit="handleSubmit(event, 'archive')">
+              <div class="form-row">
+                <input type="text" placeholder="Title" class="form-input" required>
+                <input type="text" placeholder="Category" class="form-input" required>
+              </div>
+              <textarea placeholder="Archive Description" class="form-textarea" required></textarea>
+              
+              <div class="form-row">
+                <div class="file-input-wrapper">
+                  <label>Images (Multiple)</label>
+                  <input type="file" accept="image/*" multiple class="form-file" required>
+                  <small>Upload 1+ images</small>
+                </div>
+              </div>
+
+              <button type="submit" class="btn btn-success">Save Archive</button>
+            </form>
+          </div>
+
+          <div class="items-list">
+            <h3>Current Archives</h3>
+            <div id="archiveItems" class="items-grid">
+              <p class="empty-state">No archive items yet.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- GALLERY Section -->
+        <section id="gallery" class="admin-section">
+          <div class="section-header">
+            <h2>Gallery Images</h2>
+            <button class="btn btn-primary" onclick="addNewItem('gallery')">
+              <i class="ri-add-line"></i> Add Image
+            </button>
+          </div>
+
+          <div class="form-group">
+            <label>Upload Gallery Image</label>
+            <form class="admin-form" id="galleryForm" onsubmit="handleSubmit(event, 'gallery')">
+              <input type="text" placeholder="Image Title" class="form-input" required>
+              <textarea placeholder="Image Description" class="form-textarea"></textarea>
+              
+              <div class="file-input-wrapper">
+                <label>Gallery Images (Multiple)</label>
+                <input type="file" accept="image/*" multiple class="form-file" required>
+                <small>Upload 1+ images</small>
+              </div>
+
+              <button type="submit" class="btn btn-success">Upload Image</button>
+            </form>
+          </div>
+
+          <div class="items-list">
+            <h3>Gallery Images</h3>
+            <div id="galleryItems" class="gallery-grid">
+              <p class="empty-state">No gallery images yet.</p>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal for Edit/Delete -->
+  <div id="itemModal" class="modal">
+    <div class="modal-content">
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+      <h3 id="modalTitle">Edit Item</h3>
+      <form id="modalForm" onsubmit="handleModalSubmit(event)">
+        <div id="modalFormContent">
+          <!-- Form content akan diisi dinamis -->
+        </div>
+        <div class="modal-buttons">
+          <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+          <button type="submit" class="btn btn-success">Save Changes</button>
+          <button type="button" class="btn btn-danger" onclick="deleteItem()">Delete</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="admin.js"></script>
+</body>
+</html>

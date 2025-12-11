@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>inverted.exe - Admin Login</title>
+  
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg: #111111;
+      --accent: #fff;
+      --muted: #dcdcdc;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: "Poppins", "Helvetica", Arial, system-ui;
+      background: var(--bg);
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .login-container {
+      width: 100%;
+      max-width: 400px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 40px;
+      border-radius: 4px;
+      backdrop-filter: blur(10px);
+    }
+
+    .login-header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .login-header h1 {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .login-header p {
+      font-size: 13px;
+      color: var(--muted);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .login-form {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .form-group label {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .form-group input {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--accent);
+      padding: 12px 16px;
+      border-radius: 4px;
+      font-family: "Poppins", sans-serif;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+
+    .form-group input::placeholder {
+      color: rgba(255, 255, 255, 0.4);
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: var(--accent);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .login-button {
+      padding: 12px 24px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: var(--accent);
+      font-family: "Poppins", sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 4px;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      transition: all 0.2s;
+      margin-top: 16px;
+    }
+
+    .login-button:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    .login-button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .error-message {
+      background: rgba(255, 68, 68, 0.1);
+      border: 1px solid rgba(255, 68, 68, 0.3);
+      color: #ff4444;
+      padding: 12px;
+      border-radius: 4px;
+      font-size: 13px;
+      display: none;
+      margin-bottom: 16px;
+    }
+
+    .info-text {
+      text-align: center;
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.5);
+      margin-top: 24px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      padding-top: 16px;
+    }
+
+    .back-link {
+      text-align: center;
+      margin-top: 24px;
+    }
+
+    .back-link a {
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 12px;
+      transition: color 0.2s;
+    }
+
+    .back-link a:hover {
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <div class="login-header">
+      <h1>Admin Panel</h1>
+      <p>Login to continue</p>
+    </div>
+
+    <div id="errorMessage" class="error-message"></div>
+
+    <form class="login-form" onsubmit="handleLogin(event)">
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="username" placeholder="Enter username" required>
+      </div>
+
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="password" placeholder="Enter password" required>
+      </div>
+
+      <button type="submit" class="login-button" id="loginBtn">Login</button>
+    </form>
+
+    <div class="info-text">
+      <p>For demo purposes:</p>
+      <p style="margin-top: 8px;">Username: <strong>admin</strong></p>
+      <p>Password: <strong>admin123</strong></p>
+    </div>
+
+    <div class="back-link">
+      <a href="/">← Back to Home</a>
+    </div>
+  </div>
+
+  <script>
+    // Check if already logged in
+    if (localStorage.getItem('admin_token')) {
+      window.location.href = '/admin/';
+    }
+
+    function handleLogin(event) {
+      event.preventDefault();
+
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+      const errorDiv = document.getElementById('errorMessage');
+      const loginBtn = document.getElementById('loginBtn');
+
+      // Demo credentials
+      const validUsername = 'admin';
+      const validPassword = 'admin123';
+
+      if (username === validUsername && password === validPassword) {
+        // Set token in localStorage
+        localStorage.setItem('admin_token', 'token_' + Date.now());
+        
+        // Redirect to admin panel
+        window.location.href = '/admin/';
+      } else {
+        errorDiv.textContent = 'Invalid username or password';
+        errorDiv.style.display = 'block';
+      }
+    }
+  </script>
+</body>
+</html>
