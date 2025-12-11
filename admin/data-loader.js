@@ -2,12 +2,7 @@
 // This script loads and displays data managed through admin panel on the main website pages
 
 function loadAdminData() {
-  const adminData = JSON.parse(localStorage.getItem('inverted_admin_data')) || {
-    shop: [],
-    archive: [],
-    gallery: []
-  };
-  return adminData;
+  return DatabaseSync.load();
 }
 
 // Load shop items - Simple grid view (image + title only)
@@ -95,14 +90,12 @@ function displayGalleryImages() {
   console.log('Gallery items loaded:', adminData.gallery.length, 'items');
 }
 
-// Initialize when DOM is ready
-function initializeAdminData() {
-  console.log('Initializing admin data...');
+async function initializeAdminData() {
+  await DatabaseSync.init(useFirebase); // sync data terlebih dahulu
   displayShopItems();
   displayArchiveItems();
   displayGalleryImages();
   setupImageLightbox();
-  console.log('Admin data initialization complete');
 }
 
 // Simple image lightbox for archive

@@ -1521,12 +1521,7 @@ main{
   line-height:1.4;
 }
 
-/* archive page old styles (removed - using new styles above) */
-  margin:0 auto;
-  display:grid;
-  grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));
-  gap:20px;
-}
+
 
 .gallery-item{
   position:relative;
@@ -1992,7 +1987,7 @@ main{
     right:10px;
   }
   }
-}
+
 
 @media (max-width:720px){
   :root{
@@ -2134,7 +2129,7 @@ main{
   .thumbnails{
     max-width:200px;
   }
-}
+
 
 @media (max-width:480px){
   .cover img{max-width:220px}

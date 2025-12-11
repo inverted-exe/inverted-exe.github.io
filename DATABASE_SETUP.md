@@ -46,14 +46,27 @@ Anda dapat memilih salah satu dari tiga opsi:
    - Klik "Publish"
 
 4. **Ambil Firebase Config:**
-   - Klik gear icon → "Project Settings"
+   - Klik gear icon (⚙️) di kiri atas → "Project Settings"
    - Scroll ke bawah ke section "Your apps"
-   - Klik icon `</>` untuk web
-   - Copy config object
+   - Klik icon `</>` (Web) untuk membuka config
+   - Copy seluruh config object yang muncul (terlihat seperti ini):
+   ```javascript
+   const firebaseConfig = {
+     apiKey: "AIzaSyD...xxxxx",
+     authDomain: "your-project.firebaseapp.com",
+     databaseURL: "https://your-project.firebaseio.com",
+     projectId: "your-project-id",
+     storageBucket: "your-project.appspot.com",
+     messagingSenderId: "123456789",
+     appId: "1:123456789:web:abcdef123456"
+   };
+   ```
+   - Highlight semua text di dalam box (Ctrl+A)
+   - Copy (Ctrl+C)
 
 5. **Update `database.js`:**
-   - Buka file `database.js` di root folder
-   - Ganti bagian `firebaseConfig` dengan config Anda:
+   - Buka file `database.js` di root folder workspace Anda
+   - Cari bagian di paling atas:
    ```javascript
    const firebaseConfig = {
      apiKey: "YOUR_API_KEY",
@@ -65,16 +78,39 @@ Anda dapat memilih salah satu dari tiga opsi:
      appId: "YOUR_APP_ID"
    };
    ```
+   - **Ganti SELURUH object ini dengan config yang sudah Anda copy dari Firebase**
+   - Contoh hasil akhirnya:
+   ```javascript
+   const firebaseConfig = {
+     apiKey: "AIzaSyD1234567890abcdefghijklmnopqrst",
+     authDomain: "inverted-exe-database.firebaseapp.com",
+     databaseURL: "https://inverted-exe-database.firebaseio.com",
+     projectId: "inverted-exe-database",
+     storageBucket: "inverted-exe-database.appspot.com",
+     messagingSenderId: "123456789012",
+     appId: "1:123456789012:web:abcdef1234567890"
+   };
+   ```
+   - Save file (Ctrl+S)
 
 6. **Add Firebase CDN ke HTML:**
-   - Tambahkan di file HTML (sebelum script lainnya):
+   - Buka file `index.html` di root folder
+   - Cari tag `</head>` (sebelum penutup head)
+   - Tambahkan kode berikut **SEBELUM** `</head>`:
    ```html
    <!-- Firebase -->
    <script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js"></script>
    <script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js"></script>
    <script src="database.js"></script>
    <script src="database-sync.js"></script>
+   </head>
    ```
+   
+   - **PENTING:** Ulangi langkah yang sama untuk file HTML lainnya:
+     - `gallery/index.html`
+     - `shop/index.html`
+     - `archive/index.html`
+   - Save semua file (Ctrl+S)
 
 ### Opsi 2: GitHub JSON File (Dengan API Token)
 
@@ -177,10 +213,31 @@ async function initializeAdminData() {
 
 ## Testing Database
 
-1. **Upload data dari admin panel**
-2. **Buka halaman berbeda (incognito/fresh tab)**
-3. **Cek apakah data tampil**
-4. **Jika tidak muncul, cek console untuk error**
+### Langkah-langkah Testing:
+
+1. **Upload data dari admin panel:**
+   - Buka `http://localhost:8000/admin/` atau halaman admin Anda
+   - Login dengan username: `admin`, password: `admin123`
+   - Upload beberapa item ke Shop, Archive, atau Gallery
+   - Klik tombol save/submit
+   - Tunggu 2-3 detik sampai data tersimpan
+
+2. **Buka halaman publik di tab baru (Incognito):**
+   - Buka browser baru atau gunakan Incognito Mode (Ctrl+Shift+N)
+   - Akses halaman shop/gallery/archive
+   - Cek apakah item yang Anda upload sudah muncul
+
+3. **Jika data tidak muncul:**
+   - Buka Console (F12) → Tab "Console"
+   - Cek apakah ada error message (warna merah)
+   - Catat error message-nya untuk troubleshooting
+   - Refresh halaman (F5 atau Ctrl+R)
+
+4. **Verifikasi data di Firebase (optional):**
+   - Buka https://console.firebase.google.com/
+   - Pilih project Anda
+   - Klik "Realtime Database"
+   - Lihat apakah data sudah ada di bawah "content" node
 
 ## Troubleshooting
 
