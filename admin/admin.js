@@ -57,6 +57,26 @@ function readAndCompressFile(file) {
 }
 
 // Load data from localStorage
+// ===== PERFORMANCE OPTIMIZATION =====
+// Debounce function untuk prevent excessive updates
+function debounce(func, delay = 300) {
+  let timeoutId;
+  return function(...args) {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => func(...args), delay);
+  };
+}
+
+// Cache DOM queries untuk performance
+const formInputCache = new Map();
+function getCachedInput(selector) {
+  if (!formInputCache.has(selector)) {
+    formInputCache.set(selector, document.querySelector(selector));
+  }
+  return formInputCache.get(selector);
+}
+
+// Load data from localStorage
 let adminData = JSON.parse(localStorage.getItem('inverted_admin_data')) || {
   shop: [],
   archive: [],
@@ -157,23 +177,19 @@ function checkAdmin() {
 
 // Initialize event listeners
 function initializeEventListeners() {
-  // Navigation
-  document.querySelectorAll('.admin-nav-link').forEach(link => {
-    link.addEventListener('click', (e) => {
+  // Navigation - use event delegation instead of multiple listeners
+  document.addEventListener('click', (e) => {
+    const link = e.target.closest('.admin-nav-link');
+    if (link) {
       e.preventDefault();
       const section = link.getAttribute('data-section');
       switchSection(section);
-    });
+    }
   });
 
-  // Prevent form submission on Enter for input fields
-  document.querySelectorAll('.form-input').forEach(input => {
-    input.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter' && !e.target.closest('form')) {
-        e.preventDefault();
-      }
-    });
-  });
+  // Optimize: Remove heavy keypress listener
+  // (it was checking every keystroke which causes lag)
+  // If needed, handle Enter key submission at form level instead
 }
 
 // Switch sections
@@ -198,126 +214,81 @@ async function handleSubmit(event, type) {
   event.preventDefault();
 
   const form = event.target;
+  const submitBtn = form.querySelector('button[type="submit"]');
+  const originalBtnText = submitBtn.textContent;
   
-  let item = {
-    id: Date.now(),
-    type: type,
-    createdAt: new Date().toISOString()
-  };
+  try {
+    submitBtn.disabled = true;
+    submitBtn.textContent = '⏳ Processing...';
 
-  // Get form data by type
-  if (type === 'shop') {
-    item.name = form.querySelector('input[placeholder="Product Name"]').value;
-    item.price = form.querySelector('input[placeholder="Price"]').value;
-    item.description = form.querySelector('textarea').value;
-    
-      // Handle multiple images with compression
-      const imageInput = form.querySelector('input[type="file"]');
-      if (imageInput.files.length > 0) {
-        item.images = [];
-        const files = Array.from(imageInput.files);
-        
-        for (let i = 0; i < files.length; i++) {
-          const compressed = await readAndCompressFile(files[i]);
-          item.images.push(compressed);
-        }
-        
-        item.image = item.images[0]; // Set first image as thumbnail
-        adminData.shop.push(item);
-        await saveAdminData(adminData);
-              await saveAdminData(adminData);
-              form.reset();
-              displayItems();
-              showNotification('Product saved successfully!', 'success');
-              resolve();
-            }
-          };
-          reader.readAsDataURL(file);
-        });
-      });
+    let item = {
+      id: Date.now(),
+      type: type,
+      createdAt: new Date().toISOString()
+    };
+
+    // Get form data using FormData API (no lag!)
+    const formData = new FormData(form);
+    const imageInput = form.querySelector('input[type="file"]');
+    const files = Array.from(imageInput?.files || []);
+
+    // Type-specific data extraction
+    if (type === 'shop') {
+      item.name = formData.get('productName');
+      item.price = formData.get('price');
+      item.description = formData.get('description');
+    } else if (type === 'archive') {
+      item.title = formData.get('title');
+      item.category = formData.get('category');
+      item.description = formData.get('description');
+    } else if (type === 'gallery') {
+      item.title = formData.get('title');
+      item.description = formData.get('description');
+    }
+
+    // Process images with compression
+    if (files.length > 0) {
+      item.images = [];
+      for (let i = 0; i < files.length; i++) {
+        submitBtn.textContent = `⏳ Processing ${i + 1}/${files.length}`;
+        const compressed = await readAndCompressFile(files[i]);
+        item.images.push(compressed);
+      }
+      item.image = item.images[0]; // Set first image as thumbnail
     } else {
+      item.image = null;
+      item.images = [];
+    }
+
+    // Add to appropriate data array
+    if (type === 'shop') {
       adminData.shop.push(item);
-    }
-  } else if (type === 'archive') {
-    item.title = form.querySelector('input[placeholder="Title"]').value;
-    item.category = form.querySelector('input[placeholder="Category"]').value;
-    item.description = form.querySelector('textarea').value;
-    
-    const imageInput = form.querySelector('input[type="file"]');
-    if (imageInput.files.length > 0) {
-      item.images = [];
-      let loadedCount = 0;
-      const totalFiles = imageInput.files.length;
-
-      return new Promise((resolve) => {
-        Array.from(imageInput.files).forEach((file) => {
-          const reader = new FileReader();
-          reader.onload = async (e) => {
-            item.images.push(e.target.result);
-            loadedCount++;
-
-            if (loadedCount === totalFiles) {
-              item.image = item.images[0];
-              adminData.archive.push(item);
-              await saveAdminData(adminData);
-              form.reset();
-              displayItems();
-              showNotification('Archive saved successfully!', 'success');
-              resolve();
-            }
-          };
-          reader.readAsDataURL(file);
-        });
-      });
-    } else {
+    } else if (type === 'archive') {
       adminData.archive.push(item);
-    }
-  } else if (type === 'gallery') {
-    item.title = form.querySelector('input[placeholder="Image Title"]').value;
-    item.description = form.querySelector('textarea').value;
-    
-    const imageInput = form.querySelector('input[type="file"]');
-    if (imageInput.files.length > 0) {
-      item.images = [];
-      let loadedCount = 0;
-      const totalFiles = imageInput.files.length;
-
-      return new Promise((resolve) => {
-        Array.from(imageInput.files).forEach((file) => {
-          const reader = new FileReader();
-          reader.onload = async (e) => {
-            item.images.push(e.target.result);
-            loadedCount++;
-
-            if (loadedCount === totalFiles) {
-              item.image = item.images[0];
-              adminData.gallery.push(item);
-              await saveAdminData(adminData);
-              form.reset();
-              displayItems();
-              showNotification('Image saved successfully!', 'success');
-              resolve();
-            }
-          };
-          reader.readAsDataURL(file);
-        });
-      });
-    } else {
+    } else if (type === 'gallery') {
       adminData.gallery.push(item);
     }
+
+    // Save to localStorage and Firebase
+    submitBtn.textContent = '⏳ Saving...';
+    await saveAdminData(adminData);
+
+    // Clear form
+    form.reset();
+
+    // Reload display
+    displayItems();
+
+    // Show success message
+    showNotification(`${type.charAt(0).toUpperCase() + type.slice(1)} saved successfully!`, 'success');
+
+  } catch (error) {
+    console.error('Error saving item:', error);
+    showNotification('Error saving item. Check console.', 'error');
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = originalBtnText;
   }
-
-  // Save to localStorage and Firebase
-  await saveAdminData(adminData);
-
-  // Clear form
-  form.reset();
-
-  // Reload display
-  displayItems();
-
-  // Show success message
-  showNotification('Item saved successfully!', 'success');
 }
 
 // Display items

@@ -68,10 +68,10 @@
             <label>Add New Product</label>
             <form class="admin-form" id="shopForm" onsubmit="handleSubmit(event, 'shop')">
               <div class="form-row">
-                <input type="text" placeholder="Product Name" class="form-input" required>
-                <input type="number" placeholder="Price" class="form-input" required>
+                <input type="text" name="productName" placeholder="Product Name" class="form-input" required>
+                <input type="number" name="price" placeholder="Price" class="form-input" required>
               </div>
-              <textarea placeholder="Product Description" class="form-textarea" required></textarea>
+              <textarea name="description" placeholder="Product Description" class="form-textarea" required></textarea>
               
               <div class="file-input-wrapper">
                 <label>Product Images (Multiple)</label>
@@ -105,10 +105,10 @@
             <label>Add New Archive Item</label>
             <form class="admin-form" id="archiveForm" onsubmit="handleSubmit(event, 'archive')">
               <div class="form-row">
-                <input type="text" placeholder="Title" class="form-input" required>
-                <input type="text" placeholder="Category" class="form-input" required>
+                <input type="text" name="title" placeholder="Title" class="form-input" required>
+                <input type="text" name="category" placeholder="Category" class="form-input" required>
               </div>
-              <textarea placeholder="Archive Description" class="form-textarea" required></textarea>
+              <textarea name="description" placeholder="Archive Description" class="form-textarea" required></textarea>
               
               <div class="form-row">
                 <div class="file-input-wrapper">
@@ -142,8 +142,8 @@
           <div class="form-group">
             <label>Upload Gallery Image</label>
             <form class="admin-form" id="galleryForm" onsubmit="handleSubmit(event, 'gallery')">
-              <input type="text" placeholder="Image Title" class="form-input" required>
-              <textarea placeholder="Image Description" class="form-textarea"></textarea>
+              <input type="text" name="title" placeholder="Image Title" class="form-input" required>
+              <textarea name="description" placeholder="Image Description" class="form-textarea"></textarea>
               
               <div class="file-input-wrapper">
                 <label>Gallery Images (Multiple)</label>

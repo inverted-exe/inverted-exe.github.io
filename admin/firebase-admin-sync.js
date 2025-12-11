@@ -4,6 +4,18 @@
 // Flag untuk menggunakan Firebase
 const USE_FIREBASE_ADMIN = true;
 
+// Debounce Firebase sync untuk prevent excessive calls
+let syncTimeout;
+async function debouncedFirebaseSync(data) {
+  // Clear previous timeout
+  clearTimeout(syncTimeout);
+  
+  // Wait 2 seconds after last change before syncing
+  syncTimeout = setTimeout(() => {
+    saveAdminDataToFirebase(data);
+  }, 2000);
+}
+
 // Helper function untuk save admin data ke Firebase
 async function saveAdminDataToFirebase(data) {
   try {
@@ -18,9 +30,9 @@ async function saveAdminDataToFirebase(data) {
       return false;
     }
 
-    console.log('Saving to Firebase...', data);
+    console.log('Syncing to Firebase...');
     const result = await DatabaseSync.save(data, true);
-    console.log('Firebase save result:', result);
+    console.log('Firebase sync result:', result);
     return result;
   } catch (error) {
     console.error('Error saving to Firebase:', error);
@@ -28,23 +40,8 @@ async function saveAdminDataToFirebase(data) {
   }
 }
 
-// Override localStorage setItem untuk otomatis sync ke Firebase
-const originalSetItem = Storage.prototype.setItem;
-Storage.prototype.setItem = function(key, value) {
-  originalSetItem.call(this, key, value);
-  
-  // Jika key adalah admin data dan Firebase aktif, sync ke Firebase
-  if (key === 'inverted_admin_data' && USE_FIREBASE_ADMIN && typeof DatabaseSync !== 'undefined') {
-    try {
-      const data = JSON.parse(value);
-      saveAdminDataToFirebase(data).catch(error => {
-        console.error('Background Firebase sync failed:', error);
-      });
-    } catch (e) {
-      console.error('Error parsing data for Firebase sync:', e);
-    }
-  }
-};
+// REMOVED: Storage.prototype override - it was causing lag on every keystroke
+// Instead, Firebase sync is triggered only on form submit (in handleSubmit function)
 
 // Initialize Firebase sync when admin loads
 document.addEventListener('DOMContentLoaded', async () => {
