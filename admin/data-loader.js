@@ -5,38 +5,53 @@ function loadAdminData() {
   return DatabaseSync.load();
 }
 
-// Load shop items - Simple grid view (image + title only)
+// ===== OPTIMIZED SHOP ITEMS =====
 function displayShopItems() {
   console.log('Loading shop items...');
   const adminData = loadAdminData();
   const shopContainer = document.querySelector('.shop-grid');
-  
-  console.log('Shop container:', shopContainer);
-  console.log('Shop data:', adminData.shop);
   
   if (!shopContainer) {
     console.log('Shop container not found');
     return;
   }
 
-  if (adminData.shop.length === 0) {
+  if (!adminData.shop || adminData.shop.length === 0) {
     console.log('No shop items');
     return;
   }
 
-  shopContainer.innerHTML = adminData.shop.map(item => `
-    <a href="/shop/product-detail.html?id=${item.id}" class="shop-item-simple">
+  // Enable pagination for large datasets
+  if (adminData.shop.length > 12) {
+    shopContainer.setAttribute('data-paginated', 'true');
+  }
+
+  // Render with lazy loading
+  shopContainer.innerHTML = adminData.shop.map((item, idx) => `
+    <a href="/shop/product-detail.html?id=${item.id}" class="shop-item-simple" data-item="${idx}">
       <div class="shop-image-simple">
-        ${item.image ? `<img src="${item.image}" alt="${item.name}">` : '<div style="background: rgba(255,255,255,0.1); height: 100%; display:flex; align-items:center; justify-content:center;">No Image</div>'}
+        ${item.image ? `
+          <img 
+            ${idx < 12 ? `src="${item.image}"` : `data-src="${item.image}"`}
+            alt="${item.name}" 
+            loading="lazy"
+            class="shop-item-img"
+          >
+        ` : '<div style="background: rgba(255,255,255,0.1); height: 100%; display:flex; align-items:center; justify-content:center;">No Image</div>'}
       </div>
       <h3 class="shop-item-title">${item.name}</h3>
     </a>
   `).join('');
 
-  console.log('Shop items loaded');
+  // Setup lazy loading for images
+  PerformanceManager.setupLazyLoading();
+  // Setup pagination if needed
+  PerformanceManager.setupPagination();
+  
+  console.log('Shop items loaded:', adminData.shop.length);
 }
 
-// Load archive items
+// ===== OPTIMIZED ARCHIVE ITEMS =====
 function displayArchiveItems() {
   console.log('Loading archive items...');
   const adminData = loadAdminData();
@@ -44,12 +59,24 @@ function displayArchiveItems() {
   
   if (!archiveContainer) return;
 
-  if (adminData.archive.length === 0) return;
+  if (!adminData.archive || adminData.archive.length === 0) return;
 
-  archiveContainer.innerHTML = adminData.archive.map(item => `
-    <div class="archive-item" onclick="openImageLightbox('${item.images ? item.images[0] : item.image}', '${item.title}')" style="cursor:pointer;">
+  // Enable pagination for large datasets
+  if (adminData.archive.length > 12) {
+    archiveContainer.setAttribute('data-paginated', 'true');
+  }
+
+  archiveContainer.innerHTML = adminData.archive.map((item, idx) => `
+    <div class="archive-item" data-item="${idx}" onclick="openImageLightbox('${item.images ? item.images[0] : item.image}', '${item.title}')" style="cursor:pointer;">
       <div class="archive-image">
-        ${item.image ? `<img src="${item.image}" alt="${item.title}">` : '<div style="background: rgba(255,255,255,0.1); height: 100%"></div>'}
+        ${item.image ? `
+          <img 
+            ${idx < 12 ? `src="${item.image}"` : `data-src="${item.image}"`}
+            alt="${item.title}"
+            loading="lazy"
+            class="archive-item-img"
+          >
+        ` : '<div style="background: rgba(255,255,255,0.1); height: 100%"></div>'}
       </div>
       <div class="archive-info">
         <h3>${item.title}</h3>
@@ -60,10 +87,14 @@ function displayArchiveItems() {
     </div>
   `).join('');
 
-  console.log('Archive items loaded');
+  // Setup lazy loading and pagination
+  PerformanceManager.setupLazyLoading();
+  PerformanceManager.setupPagination();
+
+  console.log('Archive items loaded:', adminData.archive.length);
 }
 
-// Load gallery images - Interactive gallery with click support
+// ===== OPTIMIZED GALLERY IMAGES =====
 function displayGalleryImages() {
   console.log('Loading gallery images...');
   const adminData = loadAdminData();
@@ -71,21 +102,37 @@ function displayGalleryImages() {
   
   if (!galleryContainer) return;
 
-  if (adminData.gallery.length === 0) return;
+  if (!adminData.gallery || adminData.gallery.length === 0) return;
+
+  // Enable pagination for large datasets
+  if (adminData.gallery.length > 12) {
+    galleryContainer.setAttribute('data-paginated', 'true');
+  }
 
   // Store gallery data globally for modal access
   window.galleryData = adminData.gallery;
 
   galleryContainer.innerHTML = adminData.gallery.map((item, index) => `
-    <div class="gallery-item" onclick="openGalleryModal(${index})" style="cursor:pointer;">
+    <div class="gallery-item" data-item="${index}" onclick="openGalleryModal(${index})" style="cursor:pointer;">
       <div class="gallery-image-wrapper">
-        ${item.image ? `<img src="${item.image}" alt="${item.title}" class="gallery-img">` : '<div style="background: rgba(255,255,255,0.1); height: 100%"></div>'}
+        ${item.image ? `
+          <img 
+            ${index < 12 ? `src="${item.image}"` : `data-src="${item.image}"`}
+            alt="${item.title}" 
+            loading="lazy"
+            class="gallery-img"
+          >
+        ` : '<div style="background: rgba(255,255,255,0.1); height: 100%"></div>'}
         <div class="gallery-item-overlay">
           <i class="ri-expand-alt-line"></i>
         </div>
       </div>
     </div>
   `).join('');
+
+  // Setup lazy loading and pagination
+  PerformanceManager.setupLazyLoading();
+  PerformanceManager.setupPagination();
 
   console.log('Gallery items loaded:', adminData.gallery.length, 'items');
 }
