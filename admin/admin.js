@@ -77,11 +77,24 @@ function getCachedInput(selector) {
 }
 
 // Load data from localStorage
-let adminData = JSON.parse(localStorage.getItem('inverted_admin_data')) || {
-  shop: [],
-  archive: [],
-  gallery: []
-};
+let adminData = (() => {
+  try {
+    const stored = localStorage.getItem('inverted_admin_data');
+    if (!stored) return { shop: [], archive: [], gallery: [] };
+    
+    const parsed = JSON.parse(stored);
+    
+    // Ensure all required arrays exist
+    return {
+      shop: Array.isArray(parsed?.shop) ? parsed.shop : [],
+      archive: Array.isArray(parsed?.archive) ? parsed.archive : [],
+      gallery: Array.isArray(parsed?.gallery) ? parsed.gallery : []
+    };
+  } catch (error) {
+    console.error('Error parsing adminData from localStorage:', error);
+    return { shop: [], archive: [], gallery: [] };
+  }
+})();
 
 // Initialize admin panel
 document.addEventListener('DOMContentLoaded', () => {
@@ -262,10 +275,13 @@ async function handleSubmit(event, type) {
 
     // Add to appropriate data array
     if (type === 'shop') {
+      if (!Array.isArray(adminData.shop)) adminData.shop = [];
       adminData.shop.push(item);
     } else if (type === 'archive') {
+      if (!Array.isArray(adminData.archive)) adminData.archive = [];
       adminData.archive.push(item);
     } else if (type === 'gallery') {
+      if (!Array.isArray(adminData.gallery)) adminData.gallery = [];
       adminData.gallery.push(item);
     }
 
