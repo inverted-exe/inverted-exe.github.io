@@ -1,5 +1,61 @@
 // Admin Panel JavaScript
 
+// ===== IMAGE COMPRESSION HELPER =====
+// Compress image before Base64 to reduce size and improve performance
+function compressImage(base64String, maxWidth = 1200, maxHeight = 1200, quality = 0.8) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      let width = img.width;
+      let height = img.height;
+      
+      // Calculate new dimensions
+      if (width > height) {
+        if (width > maxWidth) {
+          height *= maxWidth / width;
+          width = maxWidth;
+        }
+      } else {
+        if (height > maxHeight) {
+          width *= maxHeight / height;
+          height = maxHeight;
+        }
+      }
+      
+      canvas.width = width;
+      canvas.height = height;
+      
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      
+      // Convert to compressed base64
+      const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+      resolve(compressedBase64);
+    };
+    img.src = base64String;
+  });
+}
+
+// ===== FILE READER WITH COMPRESSION =====
+function readAndCompressFile(file) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        // Compress image
+        const compressed = await compressImage(e.target.result, 1200, 1200, 0.75);
+        resolve(compressed);
+      } catch (error) {
+        console.error('Error compressing image:', error);
+        // Fallback to original if compression fails
+        resolve(e.target.result);
+      }
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 // Load data from localStorage
 let adminData = JSON.parse(localStorage.getItem('inverted_admin_data')) || {
   shop: [],
@@ -155,25 +211,20 @@ async function handleSubmit(event, type) {
     item.price = form.querySelector('input[placeholder="Price"]').value;
     item.description = form.querySelector('textarea').value;
     
-    // Handle multiple images
-    const imageInput = form.querySelector('input[type="file"]');
-    if (imageInput.files.length > 0) {
-      item.images = [];
-      let loadedCount = 0;
-      const totalFiles = imageInput.files.length;
-
-      return new Promise((resolve) => {
-        Array.from(imageInput.files).forEach((file, index) => {
-          const reader = new FileReader();
-          reader.onload = async (e) => {
-            item.images.push(e.target.result);
-            loadedCount++;
-
-            // When all images loaded
-            if (loadedCount === totalFiles) {
-              item.image = item.images[0]; // Set first image as thumbnail
-              adminData.shop.push(item);
-              // Wait for Firebase sync to complete
+      // Handle multiple images with compression
+      const imageInput = form.querySelector('input[type="file"]');
+      if (imageInput.files.length > 0) {
+        item.images = [];
+        const files = Array.from(imageInput.files);
+        
+        for (let i = 0; i < files.length; i++) {
+          const compressed = await readAndCompressFile(files[i]);
+          item.images.push(compressed);
+        }
+        
+        item.image = item.images[0]; // Set first image as thumbnail
+        adminData.shop.push(item);
+        await saveAdminData(adminData);
               await saveAdminData(adminData);
               form.reset();
               displayItems();
