@@ -13,7 +13,7 @@ const translations = {
     // Shop Page
     "shop-header": "shop",
     "shop-subtitle": "latest & greatest",
-    "shop-intro": "Discover our curated collection of digital and physical products",
+    "shop-intro": "discover our curated collection of digital and physical products",
     
     // Archive Page
     "archive-header": "archive",
@@ -24,11 +24,11 @@ const translations = {
     "gallery-subtitle": "visual stories",
     
     // Product Detail
-    "back-to-shop": "Back to Shop",
-    "order-now": "Order Now",
-    "add-to-cart": "Add to Cart",
-    description: "Description",
-    price: "Price",
+    "back-to-shop": "back to shop",
+    "order-now": "order now",
+    "add-to-cart": "add to cart",
+    description: "description",
+    price: "price",
     
     // Inverted.exe Page
     "about-us": "about us",
@@ -46,7 +46,7 @@ const translations = {
     
     // Footer
     copyright: "© 2025 inverted.exe reserved.",
-    location: "Central java, ID."
+    location: "central java, id."
   },
   
   id: {

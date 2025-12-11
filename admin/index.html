@@ -26,14 +26,26 @@
       </div>
       
       <nav class="admin-nav">
-        <a href="#shop" class="admin-nav-link active" data-section="shop">
-          <i class="ri-shopping-bag-line"></i> <span class="nav-text">Shop</span>
+        <a href="#dashboard" class="admin-nav-link active" data-section="dashboard">
+          <i class="ri-dashboard-line"></i> <span class="nav-text">dashboard</span>
+        </a>
+        <a href="#inventory" class="admin-nav-link" data-section="inventory">
+          <i class="ri-stock-line"></i> <span class="nav-text">inventory</span>
+        </a>
+        <a href="#discounts" class="admin-nav-link" data-section="discounts">
+          <i class="ri-ticket-line"></i> <span class="nav-text">discounts</span>
+        </a>
+        <a href="#categories" class="admin-nav-link" data-section="categories">
+          <i class="ri-folder-line"></i> <span class="nav-text">categories</span>
+        </a>
+        <a href="#shop" class="admin-nav-link" data-section="shop">
+          <i class="ri-shopping-bag-line"></i> <span class="nav-text">shop</span>
         </a>
         <a href="#archive" class="admin-nav-link" data-section="archive">
-          <i class="ri-archive-drawer-line"></i> <span class="nav-text">Archive</span>
+          <i class="ri-archive-drawer-line"></i> <span class="nav-text">archive</span>
         </a>
         <a href="#gallery" class="admin-nav-link" data-section="gallery">
-          <i class="ri-gallery-line"></i> <span class="nav-text">Gallery</span>
+          <i class="ri-gallery-line"></i> <span class="nav-text">gallery</span>
         </a>
       </nav>
 
@@ -47,47 +59,282 @@
     <!-- Main Content -->
     <main class="admin-main">
       <header class="admin-header">
-        <h1>Content Management</h1>
+        <h1>content management</h1>
         <div class="admin-user">
-          <span>Welcome, Admin</span>
+          <span>welcome, admin</span>
           <i class="ri-user-3-line"></i>
         </div>
       </header>
 
       <div class="admin-content">
-        <!-- SHOP Section -->
-        <section id="shop" class="admin-section active">
+        <!-- DASHBOARD Section -->
+        <section id="dashboard" class="admin-section active">
           <div class="section-header">
-            <h2>Shop Items</h2>
+            <h2>dashboard</h2>
+          </div>
+
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-icon"><i class="ri-shopping-bag-line"></i></div>
+              <div class="stat-info">
+                <div class="stat-label">total products</div>
+                <div class="stat-value" id="totalProducts">0</div>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon"><i class="ri-archive-drawer-line"></i></div>
+              <div class="stat-info">
+                <div class="stat-label">archived items</div>
+                <div class="stat-value" id="totalArchived">0</div>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon"><i class="ri-gallery-line"></i></div>
+              <div class="stat-info">
+                <div class="stat-label">gallery images</div>
+                <div class="stat-value" id="totalGallery">0</div>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon"><i class="ri-image-add-line"></i></div>
+              <div class="stat-info">
+                <div class="stat-label">total images</div>
+                <div class="stat-value" id="totalImages">0</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="activity-section">
+            <h3>recent activity</h3>
+            <div id="activityTimeline" class="activity-timeline">
+              <p class="empty-state">no recent activity yet</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- INVENTORY Section -->
+        <section id="inventory" class="admin-section">
+          <div class="section-header">
+            <h2>inventory management</h2>
+          </div>
+
+          <!-- Low Stock Warning -->
+          <div id="lowStockWarning" style="display: none;">
+            <div class="alert alert-warning">
+              <i class="ri-alert-line"></i>
+              <span id="lowStockCount">0</span> items with low stock
+            </div>
+          </div>
+
+          <!-- Inventory Stats -->
+          <div class="inventory-stats">
+            <div class="stat-box">
+              <div class="stat-label">total items</div>
+              <div class="stat-number" id="totalInventoryItems">0</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">in stock</div>
+              <div class="stat-number" id="inStockItems">0</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">low stock</div>
+              <div class="stat-number warning" id="lowStockItems">0</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">out of stock</div>
+              <div class="stat-number danger" id="outOfStockItems">0</div>
+            </div>
+          </div>
+
+          <!-- Inventory Filter -->
+          <div class="filter-bar">
+            <div class="filter-group">
+              <label>status</label>
+              <select id="inventoryStatus" class="filter-select" onchange="filterInventory()">
+                <option value="">all status</option>
+                <option value="in-stock">in stock</option>
+                <option value="low-stock">low stock</option>
+                <option value="out-of-stock">out of stock</option>
+              </select>
+            </div>
+            <button class="btn btn-secondary" onclick="resetInventoryFilter()">reset</button>
+          </div>
+
+          <!-- Inventory Table -->
+          <div class="items-list">
+            <h3>stock levels</h3>
+            <div id="inventoryTable" class="inventory-table">
+              <p class="empty-state">no items in inventory yet</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- DISCOUNTS & PROMOS Section -->
+        <section id="discounts" class="admin-section">
+          <div class="section-header">
+            <h2>discounts & promos</h2>
+            <button class="btn btn-primary" onclick="showDiscountForm()">
+              <i class="ri-add-line"></i> add discount
+            </button>
+          </div>
+
+          <!-- Add Discount Form -->
+          <div class="form-group">
+            <label>create discount code</label>
+            <form class="admin-form" id="discountForm" onsubmit="handleAddDiscount(event)">
+              <div class="form-row">
+                <input type="text" id="discountCode" placeholder="Code (e.g., SAVE20)" class="form-input" required>
+                <input type="number" id="discountAmount" placeholder="Discount %" class="form-input" min="1" max="100" required>
+              </div>
+              <div class="form-row">
+                <input type="number" id="discountMinOrder" placeholder="Min Order ($)" class="form-input" min="0" value="0">
+                <input type="number" id="discountMaxUses" placeholder="Max Uses (0 = unlimited)" class="form-input" min="0" value="0">
+              </div>
+              <div class="form-row">
+                <input type="date" id="discountStart" class="form-input" required>
+                <input type="date" id="discountEnd" class="form-input" required>
+              </div>
+              <textarea id="discountDesc" placeholder="Description" class="form-textarea"></textarea>
+              <button type="submit" class="btn btn-success">save discount</button>
+              <button type="button" class="btn btn-secondary" onclick="resetDiscountForm()">cancel</button>
+            </form>
+          </div>
+
+          <!-- Active Discounts -->
+          <div class="items-list">
+            <h3>active discounts</h3>
+            <div id="discountsList" class="discounts-grid">
+              <p class="empty-state">no active discounts yet</p>
+            </div>
+          </div>
+
+          <!-- Discount Usage Stats -->
+          <div class="items-list">
+            <h3>usage statistics</h3>
+            <div id="discountStats" class="discount-stats">
+              <p class="empty-state">no discounts created</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- CATEGORIES Section -->
+        <section id="categories" class="admin-section">
+          <div class="section-header">
+            <h2>categories & tags</h2>
+            <button class="btn btn-primary" onclick="showCategoryForm()">
+              <i class="ri-add-line"></i> add category
+            </button>
+          </div>
+
+          <!-- Add Category Form -->
+          <div class="form-group">
+            <label>add new category</label>
+            <form class="admin-form" id="categoryForm" onsubmit="handleAddCategory(event)">
+              <div class="form-row">
+                <input type="text" id="categoryName" placeholder="Category Name" class="form-input" required>
+                <input type="text" id="categoryColor" placeholder="Color (hex)" class="form-input" value="#6366f1">
+              </div>
+              <textarea id="categoryDesc" placeholder="Category Description" class="form-textarea"></textarea>
+              <button type="submit" class="btn btn-success">save category</button>
+              <button type="button" class="btn btn-secondary" onclick="resetCategoryForm()">cancel</button>
+            </form>
+          </div>
+
+          <!-- Categories List -->
+          <div class="items-list">
+            <h3>all categories</h3>
+            <div id="categoriesList" class="categories-grid">
+              <p class="empty-state">no categories yet. create your first category!</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- SHOP Section -->
+        <section id="shop" class="admin-section">
+          <div class="section-header">
+            <h2>shop items</h2>
             <button class="btn btn-primary" onclick="addNewItem('shop')">
-              <i class="ri-add-line"></i> Add Item
+              <i class="ri-add-line"></i> add item
             </button>
           </div>
 
           <div class="form-group">
-            <label>Add New Product</label>
+            <label>add new product</label>
             <form class="admin-form" id="shopForm" onsubmit="handleSubmit(event, 'shop')">
               <div class="form-row">
                 <input type="text" name="productName" placeholder="Product Name" class="form-input" required>
                 <input type="number" name="price" placeholder="Price" class="form-input" required>
+                <input type="number" name="stock" placeholder="Stock Quantity" class="form-input" value="0" min="0" required>
+              </div>
+              <div class="form-row">
+                <select name="category" class="form-input">
+                  <option value="">select category</option>
+                  <option value="uncategorized">uncategorized</option>
+                </select>
+                <input type="text" name="tags" placeholder="Tags (comma-separated)" class="form-input">
               </div>
               <textarea name="description" placeholder="Product Description" class="form-textarea" required></textarea>
               
               <div class="file-input-wrapper">
-                <label>Product Images (Multiple)</label>
+                <label>product images (multiple)</label>
                 <input type="file" accept="image/*" multiple class="form-file" id="shopImages" required>
-                <small>Upload 1+ images. First image will be shown in grid, others in preview</small>
+                <small>upload 1+ images. first image will be shown in grid, others in preview</small>
               </div>
 
-              <button type="submit" class="btn btn-success">Save Product</button>
+              <button type="submit" class="btn btn-success">save product</button>
             </form>
           </div>
 
+          <div class="filter-bar">
+            <div class="filter-group">
+              <i class="ri-search-line"></i>
+              <input type="text" id="shopSearch" placeholder="search products..." class="filter-input" onkeyup="filterShopItems()">
+            </div>
+
+            <div class="filter-group">
+              <label>category</label>
+              <select id="shopCategory" class="filter-select" onchange="filterShopItems()">
+                <option value="">all categories</option>
+                <option value="uncategorized">uncategorized</option>
+              </select>
+            </div>
+
+            <div class="filter-group">
+              <label>sort by</label>
+              <select id="shopSortBy" class="filter-select" onchange="filterShopItems()">
+                <option value="date-desc">newest first</option>
+                <option value="date-asc">oldest first</option>
+                <option value="name-asc">name (a-z)</option>
+                <option value="name-desc">name (z-a)</option>
+                <option value="price-asc">price (low to high)</option>
+                <option value="price-desc">price (high to low)</option>
+              </select>
+            </div>
+
+            <button class="btn btn-secondary" onclick="resetShopFilters()">reset filters</button>
+          </div>
+
+          <!-- Bulk Actions Bar -->
+          <div class="bulk-actions-bar" id="bulkActionsBar" style="display: none;">
+            <div class="bulk-info">
+              <span id="bulkSelectedCount">0</span> items selected
+            </div>
+            <div class="bulk-buttons">
+              <button class="btn btn-secondary" onclick="bulkSelectAll()">select all</button>
+              <button class="btn btn-secondary" onclick="bulkClearSelection()">clear</button>
+              <button class="btn btn-warning" onclick="bulkArchiveItems()">archive selected</button>
+              <button class="btn btn-danger" onclick="bulkDeleteItems()">delete selected</button>
+            </div>
+          </div>
+
           <div class="items-list">
-            <h3>Current Products</h3>
+            <h3>current products</h3>
             <div id="shopItems" class="items-grid">
               <!-- Items akan dimuat dari data -->
-              <p class="empty-state">No items yet. Add your first product!</p>
+              <p class="empty-state">no items yet. add your first product!</p>
             </div>
           </div>
         </section>
@@ -95,13 +342,13 @@
         <!-- ARCHIVE Section -->
         <section id="archive" class="admin-section">
           <div class="section-header">
-            <h2>Archived Items</h2>
+            <h2>archived items</h2>
           </div>
 
           <div class="items-list">
-            <h3>Archived Items</h3>
+            <h3>archived items</h3>
             <div id="archiveItems" class="items-grid">
-              <p class="empty-state">No archived items yet.</p>
+              <p class="empty-state">no archived items yet.</p>
             </div>
           </div>
         </section>
@@ -109,29 +356,29 @@
         <!-- GALLERY Section -->
         <section id="gallery" class="admin-section">
           <div class="section-header">
-            <h2>Gallery Images</h2>
+            <h2>gallery images</h2>
             <button class="btn btn-primary" onclick="addNewItem('gallery')">
-              <i class="ri-add-line"></i> Add Image
+              <i class="ri-add-line"></i> add image
             </button>
           </div>
 
           <div class="form-group">
-            <label>Upload Gallery Images</label>
+            <label>upload gallery images</label>
             <form class="admin-form" id="galleryForm" onsubmit="handleSubmit(event, 'gallery')">
               <div class="file-input-wrapper">
-                <label>Select Images (Multiple)</label>
+                <label>select images (multiple)</label>
                 <input type="file" accept="image/*" multiple class="form-file" required>
-                <small>Upload 1+ images</small>
+                <small>upload 1+ images</small>
               </div>
 
-              <button type="submit" class="btn btn-success">Upload Images</button>
+              <button type="submit" class="btn btn-success">upload images</button>
             </form>
           </div>
 
           <div class="items-list">
-            <h3>Gallery Images</h3>
+            <h3>gallery images</h3>
             <div id="galleryItems" class="gallery-grid">
-              <p class="empty-state">No gallery images yet.</p>
+              <p class="empty-state">no gallery images yet.</p>
             </div>
           </div>
         </section>
@@ -143,15 +390,15 @@
   <div id="itemModal" class="modal">
     <div class="modal-content">
       <button class="modal-close" onclick="closeModal()">&times;</button>
-      <h3 id="modalTitle">Edit Item</h3>
+      <h3 id="modalTitle">edit item</h3>
       <form id="modalForm" onsubmit="handleModalSubmit(event)">
         <div id="modalFormContent">
           <!-- Form content akan diisi dinamis -->
         </div>
         <div class="modal-buttons">
-          <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-          <button type="submit" class="btn btn-success">Save Changes</button>
-          <button type="button" class="btn btn-danger" onclick="deleteItem()">Delete</button>
+          <button type="button" class="btn btn-secondary" onclick="closeModal()">cancel</button>
+          <button type="submit" class="btn btn-success">save changes</button>
+          <button type="button" class="btn btn-danger" onclick="deleteItem()">delete</button>
         </div>
       </form>
     </div>

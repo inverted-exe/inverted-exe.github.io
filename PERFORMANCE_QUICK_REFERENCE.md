@@ -8,7 +8,6 @@
 
 ### 🚀 **FAST LOADING**
 - Initial page load: **1.8 seconds** (down from 4.2s)
-- Repeat visits: **0.3 seconds** (instant!)
 - 100+ items page: **2.1 seconds** (down from 8.5s)
 
 ### 📜 **SMOOTH PAGINATION**
@@ -22,12 +21,6 @@
 - Pagination improves readability
 - Smooth 60fps scrolling
 - Mobile-friendly pagination controls
-
-### 🌐 **WORKS OFFLINE**
-- Service Worker caches everything
-- Works without internet connection
-- Automatic cache updates
-- Firebase always syncs when online
 
 ---
 
@@ -53,17 +46,6 @@ Off-screen images: Load when scrolled into view
 Result: 94% faster loading, smooth scrolling
 ```
 
-### 3. Browser caches content
-```
-First visit: Normal load
-↓
-Content cached in browser
-↓
-Repeat visits: INSTANT load from cache
-↓
-93% faster than first visit!
-```
-
 ---
 
 ## Performance Numbers
@@ -72,7 +54,6 @@ Repeat visits: INSTANT load from cache
 |---------|--------|-------|------------|
 | **Initial Load** | 4.2s | 1.8s | ⚡ **57% faster** |
 | **100+ Items** | 8.5s | 2.1s | ⚡ **75% faster** |
-| **Repeat Visit** | 4.2s | 0.3s | ⚡ **93% faster** |
 | **Mobile Scroll** | 45fps | 60fps | ⚡ **33% smoother** |
 | **Data Used** | 8MB | 0.5MB | 💾 **94% less** |
 
@@ -92,12 +73,6 @@ Repeat visits: INSTANT load from cache
 - Shows "Page X of Y"
 - Smooth page transitions
 
-### ✅ Service Worker
-- Website works offline
-- Assets cached for instant load
-- Automatic cache cleanup
-- No configuration needed
-
 ### ✅ Smart Caching
 - Data cached in localStorage
 - Expires after 24 hours
@@ -111,15 +86,9 @@ Repeat visits: INSTANT load from cache
 1. **`/performance.js`** (200+ lines)
    - Handles lazy loading
    - Manages pagination
-   - Service Worker registration
    - Caching utilities
 
-2. **`/sw.js`** (Service Worker - 80+ lines)
-   - Offline support
-   - Asset caching
-   - Automatic updates
-
-3. **`/PERFORMANCE_OPTIMIZATION.md`**
+2. **`/PERFORMANCE_OPTIMIZATION.md`**
    - Detailed documentation
    - Configuration guide
    - Troubleshooting tips
@@ -160,19 +129,6 @@ Repeat visits: INSTANT load from cache
 3. Click "Next"
 4. **Expected**: Page scrolls to top, shows items 13-24
 
-### ✅ Test 4: Offline Mode
-1. Open DevTools (F12)
-2. Go to Application → Service Workers
-3. Check "Offline" box
-4. Reload page
-5. **Expected**: Page loads from cache!
-
-### ✅ Test 5: Repeat Visits
-1. Visit website normally
-2. Close browser tab
-3. Open website again
-4. **Expected**: Instant load (cached!)
-
 ---
 
 ## Performance Monitoring
@@ -187,10 +143,6 @@ Repeat visits: INSTANT load from cache
   - First 12 images load immediately
   - Rest load on-demand
 
-- **Application tab**: Check Service Worker
-  - Should show "Service Worker registered"
-  - Verify offline checkbox works
-
 ---
 
 ## Why This Matters
@@ -204,11 +156,6 @@ Repeat visits: INSTANT load from cache
 - Uses less bandwidth
 - Battery friendly
 - Smooth scrolling
-
-### 🌐 **Works Offline**
-- Users can browse cached content
-- No blank pages without internet
-- Professional feel
 
 ### 💾 **Efficient**
 - Less data transferred
@@ -230,21 +177,6 @@ Repeat visits: INSTANT load from cache
 - Older browsers: Images still load (just not lazy)
 - All features optional
 - Website still works
-
----
-
-## What's Cached?
-
-### Assets Cached (Offline)
-✅ HTML pages
-✅ CSS files
-✅ JavaScript files
-✅ Google Fonts
-✅ Remix Icons
-
-### NOT Cached
-❌ Firebase data (always fresh)
-❌ Admin panel (always live)
 
 ---
 
@@ -295,8 +227,6 @@ Load time: 2.1 seconds
 User is happy, browses more pages
 ↓
 Images load as user scrolls
-↓
-Repeat visits: 0.3 seconds (cached!)
 ```
 
 ---
@@ -306,7 +236,6 @@ Repeat visits: 0.3 seconds (cached!)
 ✅ Pages load **2-5x faster**
 ✅ Smooth **60fps** scrolling
 ✅ Mobile optimized
-✅ Works **offline**
 ✅ Smart caching
 ✅ Professional feel
 

@@ -56,7 +56,7 @@
       font-size: 13px;
       color: var(--muted);
       letter-spacing: 0.05em;
-      text-transform: uppercase;
+      text-transform: lowercase;
     }
 
     .login-form {
@@ -74,7 +74,7 @@
     .form-group label {
       font-size: 12px;
       font-weight: 600;
-      text-transform: uppercase;
+      text-transform: lowercase;
       letter-spacing: 0.05em;
     }
 
@@ -109,7 +109,7 @@
       font-weight: 600;
       border-radius: 4px;
       cursor: pointer;
-      text-transform: uppercase;
+      text-transform: lowercase;
       letter-spacing: 0.05em;
       transition: all 0.2s;
       margin-top: 16px;
@@ -165,34 +165,34 @@
 <body>
   <div class="login-container">
     <div class="login-header">
-      <h1>Admin Panel</h1>
-      <p>Login to continue</p>
+      <h1>admin panel</h1>
+      <p>login to continue</p>
     </div>
 
     <div id="errorMessage" class="error-message"></div>
 
     <form class="login-form" onsubmit="handleLogin(event)">
       <div class="form-group">
-        <label>Username</label>
-        <input type="text" id="username" placeholder="Enter username" required>
+        <label>username</label>
+        <input type="text" id="username" placeholder="enter username" required>
       </div>
 
       <div class="form-group">
-        <label>Password</label>
-        <input type="password" id="password" placeholder="Enter password" required>
+        <label>password</label>
+        <input type="password" id="password" placeholder="enter password" required>
       </div>
 
-      <button type="submit" class="login-button" id="loginBtn">Login</button>
+      <button type="submit" class="login-button" id="loginBtn">login</button>
     </form>
 
     <div class="info-text">
-      <p>For demo purposes:</p>
-      <p style="margin-top: 8px;">Username: <strong>admin</strong></p>
-      <p>Password: <strong>admin123</strong></p>
+      <p>for demo purposes:</p>
+      <p style="margin-top: 8px;">username: <strong>admin</strong></p>
+      <p>password: <strong>admin123</strong></p>
     </div>
 
     <div class="back-link">
-      <a href="/">← Back to Home</a>
+      <a href="/">← back to home</a>
     </div>
   </div>
 

@@ -15,7 +15,6 @@ const PerformanceManager = {
   init: () => {
     PerformanceManager.setupLazyLoading();
     PerformanceManager.setupPagination();
-    PerformanceManager.registerServiceWorker();
     PerformanceManager.optimizeImages();
   },
 
@@ -179,17 +178,6 @@ const PerformanceManager = {
     // In production, you'd compress and convert on server
     // For now, return original
     return src;
-  },
-
-  // ===== SERVICE WORKER REGISTRATION =====
-  registerServiceWorker: () => {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').then(reg => {
-        console.log('Service Worker registered:', reg);
-      }).catch(err => {
-        console.log('Service Worker registration failed:', err);
-      });
-    }
   },
 
   // ===== CACHING UTILITIES =====

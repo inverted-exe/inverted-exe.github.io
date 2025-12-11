@@ -80,7 +80,7 @@ function getCachedInput(selector) {
 let adminData = (() => {
   try {
     const stored = localStorage.getItem('inverted_admin_data');
-    if (!stored) return { shop: [], archive: [], gallery: [] };
+    if (!stored) return { shop: [], archive: [], gallery: [], categories: [], discounts: [] };
     
     const parsed = JSON.parse(stored);
     
@@ -88,11 +88,13 @@ let adminData = (() => {
     return {
       shop: Array.isArray(parsed?.shop) ? parsed.shop : [],
       archive: Array.isArray(parsed?.archive) ? parsed.archive : [],
-      gallery: Array.isArray(parsed?.gallery) ? parsed.gallery : []
+      gallery: Array.isArray(parsed?.gallery) ? parsed.gallery : [],
+      categories: Array.isArray(parsed?.categories) ? parsed.categories : [],
+      discounts: Array.isArray(parsed?.discounts) ? parsed.discounts : []
     };
   } catch (error) {
     console.error('Error parsing adminData from localStorage:', error);
-    return { shop: [], archive: [], gallery: [] };
+    return { shop: [], archive: [], gallery: [], categories: [] };
   }
 })();
 
@@ -249,7 +251,10 @@ async function handleSubmit(event, type) {
     if (type === 'shop') {
       item.name = formData.get('productName');
       item.price = formData.get('price');
+      item.stock = parseInt(formData.get('stock')) || 0;
       item.description = formData.get('description');
+      item.category = formData.get('category') || '';
+      item.tags = formData.get('tags') || '';
     } else if (type === 'archive') {
       item.title = formData.get('title');
       item.category = formData.get('category');
@@ -297,11 +302,11 @@ async function handleSubmit(event, type) {
     displayItems();
 
     // Show success message
-    showNotification(`${type.charAt(0).toUpperCase() + type.slice(1)} saved successfully!`, 'success');
+    showNotification(`${type.charAt(0).toLowerCase() + type.slice(1)} saved successfully!`, 'success');
 
   } catch (error) {
     console.error('Error saving item:', error);
-    showNotification('Error saving item. Check console.', 'error');
+    showNotification('error saving item. check console.', 'error');
   } finally {
     submitBtn.disabled = false;
     submitBtn.textContent = originalBtnText;
@@ -310,9 +315,870 @@ async function handleSubmit(event, type) {
 
 // Display items
 function displayItems() {
+  displayDashboard();
+  displayInventory();
+  displayDiscounts();
+  displayCategories();
+  updateCategorySelects();
   displayShopItems();
   displayArchiveItems();
   displayGalleryItems();
+}
+
+// Display dashboard with analytics
+function displayDashboard() {
+  // Calculate stats
+  const totalProducts = adminData.shop?.length || 0;
+  const totalArchived = adminData.archive?.length || 0;
+  const totalGalleryItems = adminData.gallery?.length || 0;
+  const totalImages = (adminData.shop || []).reduce((sum, item) => {
+    return sum + (item.images?.length || 1);
+  }, 0) + (adminData.archive || []).reduce((sum, item) => {
+    return sum + (item.images?.length || 1);
+  }, 0) + (adminData.gallery || []).reduce((sum, item) => {
+    return sum + (item.images?.length || 1);
+  }, 0);
+
+  // Update stat cards
+  document.getElementById('totalProducts').textContent = totalProducts;
+  document.getElementById('totalArchived').textContent = totalArchived;
+  document.getElementById('totalGallery').textContent = totalGalleryItems;
+  document.getElementById('totalImages').textContent = totalImages;
+
+  // Update activity timeline
+  displayActivityTimeline();
+}
+
+// Display recent activity timeline
+function displayActivityTimeline() {
+  const activityTimeline = document.getElementById('activityTimeline');
+  const activities = [];
+
+  // Collect all activities with timestamps
+  if (adminData.shop) {
+    adminData.shop.forEach(item => {
+      activities.push({
+        type: 'product',
+        action: 'added product',
+        name: item.name,
+        timestamp: item.createdAt,
+        icon: 'ri-shopping-bag-line'
+      });
+    });
+  }
+
+  if (adminData.archive) {
+    adminData.archive.forEach(item => {
+      activities.push({
+        type: 'archive',
+        action: 'archived',
+        name: item.title,
+        timestamp: item.createdAt,
+        icon: 'ri-archive-drawer-line'
+      });
+    });
+  }
+
+  if (adminData.gallery) {
+    adminData.gallery.forEach(item => {
+      activities.push({
+        type: 'gallery',
+        action: 'uploaded image',
+        name: item.title,
+        timestamp: item.createdAt,
+        icon: 'ri-gallery-line'
+      });
+    });
+  }
+
+  // Sort by timestamp (newest first)
+  activities.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+  // Display last 10 activities
+  if (activities.length === 0) {
+    activityTimeline.innerHTML = '<p class="empty-state">no recent activity yet</p>';
+    return;
+  }
+
+  activityTimeline.innerHTML = activities.slice(0, 10).map(activity => {
+    const date = new Date(activity.timestamp);
+    const timeStr = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+    return `
+      <div class="activity-item">
+        <div class="activity-icon"><i class="${activity.icon}"></i></div>
+        <div class="activity-content">
+          <div class="activity-text">${activity.action}: <strong>${activity.name}</strong></div>
+          <div class="activity-time">${dateStr} at ${timeStr}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ===== CATEGORIES & TAGS FUNCTIONS =====
+// Get next category ID
+function getNextCategoryId() {
+  if (adminData.categories.length === 0) return 1;
+  return Math.max(...adminData.categories.map(c => c.id || 0)) + 1;
+}
+
+// Add new category
+function handleAddCategory(e) {
+  e.preventDefault();
+  
+  const name = document.getElementById('categoryName').value;
+  const color = document.getElementById('categoryColor').value;
+  const desc = document.getElementById('categoryDesc').value;
+  
+  const newCategory = {
+    id: getNextCategoryId(),
+    name: name.toLowerCase(),
+    color: color,
+    description: desc,
+    createdAt: new Date().toISOString()
+  };
+  
+  adminData.categories.push(newCategory);
+  saveData();
+  displayCategories();
+  resetCategoryForm();
+  updateCategorySelects();
+  showNotification(`category "${name}" created`, 'success');
+}
+
+// Reset category form
+function resetCategoryForm() {
+  document.getElementById('categoryForm').reset();
+  document.getElementById('categoryColor').value = '#6366f1';
+}
+
+// Display categories
+function displayCategories() {
+  const container = document.getElementById('categoriesList');
+  
+  if (adminData.categories.length === 0) {
+    container.innerHTML = '<p class="empty-state">no categories yet. create your first category!</p>';
+    return;
+  }
+  
+  // Count items per category
+  const categoryCounts = {};
+  adminData.shop.forEach(item => {
+    const cat = item.category || 'uncategorized';
+    categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+  });
+  
+  container.innerHTML = adminData.categories.map(cat => `
+    <div class="category-card">
+      <div class="category-color" style="background-color: ${cat.color}"></div>
+      <div class="category-name">${cat.name}</div>
+      <div class="category-count">${categoryCounts[cat.id] || 0} items</div>
+      <div class="category-actions">
+        <button class="btn btn-secondary" onclick="editCategory(${cat.id})">edit</button>
+        <button class="btn btn-danger" onclick="deleteCategory(${cat.id})">delete</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// Edit category
+function editCategory(id) {
+  const cat = adminData.categories.find(c => c.id === id);
+  if (!cat) return;
+  
+  document.getElementById('categoryName').value = cat.name;
+  document.getElementById('categoryColor').value = cat.color;
+  document.getElementById('categoryDesc').value = cat.description || '';
+  
+  // Update form to edit mode
+  const form = document.getElementById('categoryForm');
+  const button = form.querySelector('button[type="submit"]');
+  button.textContent = 'update category';
+  button.onclick = (e) => {
+    e.preventDefault();
+    const name = document.getElementById('categoryName').value;
+    const color = document.getElementById('categoryColor').value;
+    const desc = document.getElementById('categoryDesc').value;
+    
+    cat.name = name.toLowerCase();
+    cat.color = color;
+    cat.description = desc;
+    
+    saveData();
+    displayCategories();
+    resetCategoryForm();
+    button.textContent = 'save category';
+    button.onclick = null;
+    showNotification('category updated', 'success');
+  };
+}
+
+// Delete category
+function deleteCategory(id) {
+  const cat = adminData.categories.find(c => c.id === id);
+  if (!cat) return;
+  
+  if (confirm(`delete category "${cat.name}"? items will be uncategorized.`)) {
+    // Uncategorize items in this category
+    adminData.shop.forEach(item => {
+      if (item.category === id) {
+        item.category = '';
+      }
+    });
+    
+    adminData.categories = adminData.categories.filter(c => c.id !== id);
+    saveData();
+    displayCategories();
+    updateCategorySelects();
+    displayShopItems();
+    showNotification('category deleted', 'success');
+  }
+}
+
+// Update category select dropdowns
+function updateCategorySelects() {
+  const categorySelects = document.querySelectorAll('[name="category"]');
+  categorySelects.forEach(select => {
+    const currentValue = select.value;
+    select.innerHTML = '<option value="">select category</option>';
+    select.innerHTML += '<option value="">uncategorized</option>';
+    adminData.categories.forEach(cat => {
+      select.innerHTML += `<option value="${cat.id}">${cat.name}</option>`;
+    });
+    select.value = currentValue;
+  });
+  
+  // Update category filter in shop
+  const categoryFilter = document.getElementById('shopCategory');
+  if (categoryFilter) {
+    const currentValue = categoryFilter.value;
+    categoryFilter.innerHTML = '<option value="">all categories</option>';
+    categoryFilter.innerHTML += '<option value="">uncategorized</option>';
+    adminData.categories.forEach(cat => {
+      categoryFilter.innerHTML += `<option value="${cat.id}">${cat.name}</option>`;
+    });
+    categoryFilter.value = currentValue;
+  }
+}
+
+// Show category form
+function showCategoryForm() {
+  document.getElementById('categoryForm').scrollIntoView({ behavior: 'smooth' });
+  document.getElementById('categoryName').focus();
+}
+
+// ===== INVENTORY MANAGEMENT FUNCTIONS =====
+// Display inventory table
+function displayInventory() {
+  const container = document.getElementById('inventoryTable');
+  
+  if (adminData.shop.length === 0) {
+    container.innerHTML = '<p class="empty-state">no items in inventory yet</p>';
+    updateInventoryStats();
+    return;
+  }
+  
+  const inventory = adminData.shop.map(item => {
+    const stock = item.stock || 0;
+    let status = 'in-stock';
+    if (stock === 0) status = 'out-of-stock';
+    else if (stock <= 5) status = 'low-stock';
+    
+    return { item, stock, status };
+  });
+  
+  container.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>product name</th>
+          <th>category</th>
+          <th>price</th>
+          <th>stock</th>
+          <th>status</th>
+          <th>actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${inventory.map(inv => {
+          const cat = adminData.categories.find(c => c.id == inv.item.category);
+          const categoryName = cat ? cat.name : 'uncategorized';
+          
+          return `
+          <tr>
+            <td>${inv.item.name}</td>
+            <td>${categoryName}</td>
+            <td>$${inv.item.price}</td>
+            <td>
+              <div class="stock-actions">
+                <input type="number" id="stock-${inv.item.id}" value="${inv.stock}" min="0">
+                <button class="btn btn-secondary" onclick="updateStock(${inv.item.id})">update</button>
+              </div>
+            </td>
+            <td>
+              <span class="stock-status">
+                <span class="stock-indicator ${inv.status}"></span>
+                ${inv.status.replace('-', ' ')}
+              </span>
+            </td>
+            <td>
+              <button class="btn btn-secondary" style="font-size: 11px;" onclick="addStockQuick(${inv.item.id}, 10)">+10</button>
+              <button class="btn btn-warning" style="font-size: 11px;" onclick="reduceStockQuick(${inv.item.id}, 1)">-1</button>
+            </td>
+          </tr>
+          `;
+        }).join('')}
+      </tbody>
+    </table>
+  `;
+  
+  updateInventoryStats();
+}
+
+// Update stock quantity
+function updateStock(itemId) {
+  const input = document.getElementById(`stock-${itemId}`);
+  const newStock = parseInt(input.value) || 0;
+  
+  const item = adminData.shop.find(i => i.id === itemId);
+  if (!item) return;
+  
+  item.stock = newStock;
+  saveData();
+  displayInventory();
+  showNotification('stock updated', 'success');
+}
+
+// Quick add stock
+function addStockQuick(itemId, amount) {
+  const item = adminData.shop.find(i => i.id === itemId);
+  if (!item) return;
+  
+  item.stock = (item.stock || 0) + amount;
+  saveData();
+  displayInventory();
+}
+
+// Quick reduce stock
+function reduceStockQuick(itemId, amount) {
+  const item = adminData.shop.find(i => i.id === itemId);
+  if (!item) return;
+  
+  item.stock = Math.max(0, (item.stock || 0) - amount);
+  saveData();
+  displayInventory();
+}
+
+// Update inventory stats
+function updateInventoryStats() {
+  const totalItems = adminData.shop.length;
+  let inStock = 0;
+  let lowStock = 0;
+  let outOfStock = 0;
+  
+  adminData.shop.forEach(item => {
+    const stock = item.stock || 0;
+    if (stock === 0) outOfStock++;
+    else if (stock <= 5) lowStock++;
+    else inStock++;
+  });
+  
+  document.getElementById('totalInventoryItems').textContent = totalItems;
+  document.getElementById('inStockItems').textContent = inStock;
+  document.getElementById('lowStockItems').textContent = lowStock;
+  document.getElementById('outOfStockItems').textContent = outOfStock;
+  
+  // Show low stock warning
+  const warning = document.getElementById('lowStockWarning');
+  if (lowStock > 0 || outOfStock > 0) {
+    warning.style.display = 'block';
+    document.getElementById('lowStockCount').textContent = lowStock + outOfStock;
+  } else {
+    warning.style.display = 'none';
+  }
+}
+
+// Filter inventory
+function filterInventory() {
+  const status = document.getElementById('inventoryStatus').value;
+  const container = document.getElementById('inventoryTable');
+  
+  if (adminData.shop.length === 0) {
+    container.innerHTML = '<p class="empty-state">no items in inventory yet</p>';
+    return;
+  }
+  
+  let filtered = adminData.shop;
+  
+  if (status) {
+    filtered = filtered.filter(item => {
+      const stock = item.stock || 0;
+      if (status === 'in-stock') return stock > 5;
+      if (status === 'low-stock') return stock > 0 && stock <= 5;
+      if (status === 'out-of-stock') return stock === 0;
+    });
+  }
+  
+  const inventory = filtered.map(item => {
+    const stock = item.stock || 0;
+    let itemStatus = 'in-stock';
+    if (stock === 0) itemStatus = 'out-of-stock';
+    else if (stock <= 5) itemStatus = 'low-stock';
+    
+    return { item, stock, status: itemStatus };
+  });
+  
+  container.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>product name</th>
+          <th>category</th>
+          <th>price</th>
+          <th>stock</th>
+          <th>status</th>
+          <th>actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${inventory.map(inv => {
+          const cat = adminData.categories.find(c => c.id == inv.item.category);
+          const categoryName = cat ? cat.name : 'uncategorized';
+          
+          return `
+          <tr>
+            <td>${inv.item.name}</td>
+            <td>${categoryName}</td>
+            <td>$${inv.item.price}</td>
+            <td>
+              <div class="stock-actions">
+                <input type="number" id="stock-${inv.item.id}" value="${inv.stock}" min="0">
+                <button class="btn btn-secondary" onclick="updateStock(${inv.item.id})">update</button>
+              </div>
+            </td>
+            <td>
+              <span class="stock-status">
+                <span class="stock-indicator ${inv.status}"></span>
+                ${inv.status.replace('-', ' ')}
+              </span>
+            </td>
+            <td>
+              <button class="btn btn-secondary" style="font-size: 11px;" onclick="addStockQuick(${inv.item.id}, 10)">+10</button>
+              <button class="btn btn-warning" style="font-size: 11px;" onclick="reduceStockQuick(${inv.item.id}, 1)">-1</button>
+            </td>
+          </tr>
+          `;
+        }).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+// Reset inventory filter
+function resetInventoryFilter() {
+  document.getElementById('inventoryStatus').value = '';
+  displayInventory();
+}
+
+// ===== DISCOUNTS & PROMOS FUNCTIONS =====
+// Get next discount ID
+function getNextDiscountId() {
+  if (adminData.discounts.length === 0) return 1;
+  return Math.max(...adminData.discounts.map(d => d.id || 0)) + 1;
+}
+
+// Add discount
+function handleAddDiscount(e) {
+  e.preventDefault();
+  
+  const code = document.getElementById('discountCode').value.toUpperCase();
+  const amount = parseInt(document.getElementById('discountAmount').value);
+  const minOrder = parseFloat(document.getElementById('discountMinOrder').value) || 0;
+  const maxUses = parseInt(document.getElementById('discountMaxUses').value) || 0;
+  const startDate = document.getElementById('discountStart').value;
+  const endDate = document.getElementById('discountEnd').value;
+  const desc = document.getElementById('discountDesc').value;
+  
+  // Check if code already exists
+  if (adminData.discounts.some(d => d.code === code)) {
+    showNotification('discount code already exists', 'error');
+    return;
+  }
+  
+  const newDiscount = {
+    id: getNextDiscountId(),
+    code: code,
+    amount: amount,
+    minOrder: minOrder,
+    maxUses: maxUses,
+    currentUses: 0,
+    description: desc,
+    startDate: startDate,
+    endDate: endDate,
+    createdAt: new Date().toISOString()
+  };
+  
+  adminData.discounts.push(newDiscount);
+  saveData();
+  displayDiscounts();
+  resetDiscountForm();
+  showNotification(`discount code "${code}" created`, 'success');
+}
+
+// Reset discount form
+function resetDiscountForm() {
+  document.getElementById('discountForm').reset();
+  const button = document.getElementById('discountForm').querySelector('button[type="submit"]');
+  button.textContent = 'save discount';
+  button.onclick = null;
+}
+
+// Display discounts
+function displayDiscounts() {
+  const container = document.getElementById('discountsList');
+  
+  if (adminData.discounts.length === 0) {
+    container.innerHTML = '<p class="empty-state">no active discounts yet</p>';
+    displayDiscountStats();
+    return;
+  }
+  
+  const today = new Date().toISOString().split('T')[0];
+  
+  container.innerHTML = adminData.discounts.map(discount => {
+    const isExpired = discount.endDate < today;
+    const isActive = !isExpired && discount.startDate <= today;
+    const usagePercentage = discount.maxUses > 0 ? ((discount.currentUses / discount.maxUses) * 100) : 0;
+    
+    return `
+      <div class="discount-card">
+        <div class="discount-badge ${isExpired ? 'expired' : ''}">
+          ${isExpired ? 'expired' : isActive ? 'active' : 'upcoming'}
+        </div>
+        <div class="discount-code">${discount.code}</div>
+        <div class="discount-amount">${discount.amount}% OFF</div>
+        <div class="discount-info">
+          <p><strong>min order:</strong> $${discount.minOrder}</p>
+          <p><strong>valid:</strong> ${discount.startDate} to ${discount.endDate}</p>
+          <p><strong>uses:</strong> ${discount.currentUses}${discount.maxUses > 0 ? '/' + discount.maxUses : ' (unlimited)'}</p>
+          ${discount.description ? `<p><strong>note:</strong> ${discount.description}</p>` : ''}
+        </div>
+        <div class="discount-actions">
+          <button class="btn btn-secondary" onclick="editDiscount(${discount.id})">edit</button>
+          <button class="btn btn-danger" onclick="deleteDiscount(${discount.id})">delete</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+  
+  displayDiscountStats();
+}
+
+// Edit discount
+function editDiscount(id) {
+  const discount = adminData.discounts.find(d => d.id === id);
+  if (!discount) return;
+  
+  document.getElementById('discountCode').value = discount.code;
+  document.getElementById('discountAmount').value = discount.amount;
+  document.getElementById('discountMinOrder').value = discount.minOrder;
+  document.getElementById('discountMaxUses').value = discount.maxUses;
+  document.getElementById('discountStart').value = discount.startDate;
+  document.getElementById('discountEnd').value = discount.endDate;
+  document.getElementById('discountDesc').value = discount.description || '';
+  
+  const form = document.getElementById('discountForm');
+  const button = form.querySelector('button[type="submit"]');
+  button.textContent = 'update discount';
+  button.onclick = (e) => {
+    e.preventDefault();
+    const code = document.getElementById('discountCode').value.toUpperCase();
+    const amount = parseInt(document.getElementById('discountAmount').value);
+    const minOrder = parseFloat(document.getElementById('discountMinOrder').value) || 0;
+    const maxUses = parseInt(document.getElementById('discountMaxUses').value) || 0;
+    const startDate = document.getElementById('discountStart').value;
+    const endDate = document.getElementById('discountEnd').value;
+    const desc = document.getElementById('discountDesc').value;
+    
+    discount.code = code;
+    discount.amount = amount;
+    discount.minOrder = minOrder;
+    discount.maxUses = maxUses;
+    discount.startDate = startDate;
+    discount.endDate = endDate;
+    discount.description = desc;
+    
+    saveData();
+    displayDiscounts();
+    resetDiscountForm();
+    button.textContent = 'save discount';
+    button.onclick = null;
+    showNotification('discount updated', 'success');
+  };
+}
+
+// Delete discount
+function deleteDiscount(id) {
+  const discount = adminData.discounts.find(d => d.id === id);
+  if (!discount) return;
+  
+  if (confirm(`delete discount code "${discount.code}"?`)) {
+    adminData.discounts = adminData.discounts.filter(d => d.id !== id);
+    saveData();
+    displayDiscounts();
+    showNotification('discount deleted', 'success');
+  }
+}
+
+// Display discount stats
+function displayDiscountStats() {
+  const container = document.getElementById('discountStats');
+  
+  if (adminData.discounts.length === 0) {
+    container.innerHTML = '<p class="empty-state">no discounts created</p>';
+    return;
+  }
+  
+  const today = new Date().toISOString().split('T')[0];
+  const activeCount = adminData.discounts.filter(d => !d.endDate < today && d.startDate <= today).length;
+  const totalUses = adminData.discounts.reduce((sum, d) => sum + d.currentUses, 0);
+  const totalRevenueSaved = adminData.discounts.reduce((sum, d) => {
+    return sum + (d.currentUses * (d.amount / 100) * 50); // Estimate based on avg order
+  }, 0);
+  
+  container.innerHTML = `
+    <div class="discount-stat-card">
+      <div class="discount-stat-label">total discounts</div>
+      <div class="discount-stat-value">${adminData.discounts.length}</div>
+      <div class="discount-stat-sublabel">codes created</div>
+    </div>
+    <div class="discount-stat-card">
+      <div class="discount-stat-label">active now</div>
+      <div class="discount-stat-value">${activeCount}</div>
+      <div class="discount-stat-sublabel">live discounts</div>
+    </div>
+    <div class="discount-stat-card">
+      <div class="discount-stat-label">total uses</div>
+      <div class="discount-stat-value">${totalUses}</div>
+      <div class="discount-stat-sublabel">redemptions</div>
+    </div>
+  `;
+}
+
+// Show discount form
+function showDiscountForm() {
+  document.getElementById('discountForm').scrollIntoView({ behavior: 'smooth' });
+  document.getElementById('discountCode').focus();
+}
+// Filter Shop Items
+function filterShopItems() {
+  const searchInput = document.getElementById('shopSearch').value.toLowerCase();
+  const categoryFilter = document.getElementById('shopCategory').value;
+  const sortBy = document.getElementById('shopSortBy').value;
+
+  // Get shop items
+  let filtered = [...adminData.shop];
+
+  // Search filter
+  if (searchInput) {
+    filtered = filtered.filter(item => 
+      item.name.toLowerCase().includes(searchInput) || 
+      (item.description && item.description.toLowerCase().includes(searchInput)) ||
+      (item.tags && item.tags.toLowerCase().includes(searchInput))
+    );
+  }
+
+  // Category filter
+  if (categoryFilter) {
+    filtered = filtered.filter(item => item.category === categoryFilter || (categoryFilter === '' && !item.category));
+  }
+
+  // Sort
+  switch(sortBy) {
+    case 'date-desc':
+      filtered.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+      break;
+    case 'date-asc':
+      filtered.sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
+      break;
+    case 'name-asc':
+      filtered.sort((a, b) => a.name.localeCompare(b.name));
+      break;
+    case 'name-desc':
+      filtered.sort((a, b) => b.name.localeCompare(a.name));
+      break;
+    case 'price-asc':
+      filtered.sort((a, b) => a.price - b.price);
+      break;
+    case 'price-desc':
+      filtered.sort((a, b) => b.price - a.price);
+      break;
+  }
+
+  // Display filtered items
+  displayShopItemsFiltered(filtered);
+}
+
+// Reset Shop Filters
+function resetShopFilters() {
+  document.getElementById('shopSearch').value = '';
+  document.getElementById('shopCategory').value = '';
+  document.getElementById('shopPriceRange').value = '10000';
+  document.getElementById('shopSortBy').value = 'date-desc';
+  document.getElementById('shopPriceValue').textContent = 'all prices';
+  displayShopItems();
+}
+
+// Update price range display
+document.addEventListener('DOMContentLoaded', function() {
+  const priceSlider = document.getElementById('shopPriceRange');
+  if (priceSlider) {
+    priceSlider.addEventListener('input', function() {
+      const maxPrice = this.value;
+      if (maxPrice == 10000) {
+        document.getElementById('shopPriceValue').textContent = 'all prices';
+      } else {
+        document.getElementById('shopPriceValue').textContent = '0 - $' + maxPrice;
+      }
+    });
+  }
+});
+
+// Track selected items for bulk operations
+let selectedItems = new Set();
+
+// Toggle item selection
+function toggleItemSelection(itemId) {
+  if (selectedItems.has(itemId)) {
+    selectedItems.delete(itemId);
+  } else {
+    selectedItems.add(itemId);
+  }
+  updateBulkActionsBar();
+  updateItemCardSelection();
+}
+
+// Update bulk actions bar visibility
+function updateBulkActionsBar() {
+  const bar = document.getElementById('bulkActionsBar');
+  const count = document.getElementById('bulkSelectedCount');
+  
+  if (selectedItems.size > 0) {
+    bar.style.display = 'flex';
+    count.textContent = selectedItems.size;
+  } else {
+    bar.style.display = 'none';
+  }
+}
+
+// Update item card visual selection
+function updateItemCardSelection() {
+  const cards = document.querySelectorAll('.item-card');
+  cards.forEach(card => {
+    const checkbox = card.querySelector('.item-checkbox');
+    if (checkbox && selectedItems.has(parseInt(checkbox.value))) {
+      card.classList.add('selected');
+      checkbox.checked = true;
+    } else {
+      card.classList.remove('selected');
+      if (checkbox) checkbox.checked = false;
+    }
+  });
+}
+
+// Select all items
+function bulkSelectAll() {
+  adminData.shop.forEach(item => {
+    selectedItems.add(item.id);
+  });
+  updateBulkActionsBar();
+  updateItemCardSelection();
+}
+
+// Clear all selections
+function bulkClearSelection() {
+  selectedItems.clear();
+  updateBulkActionsBar();
+  updateItemCardSelection();
+}
+
+// Bulk archive items
+function bulkArchiveItems() {
+  if (selectedItems.size === 0) return;
+  
+  if (confirm(`archive ${selectedItems.size} items?`)) {
+    selectedItems.forEach(itemId => {
+      const item = adminData.shop.find(i => i.id === itemId);
+      if (item) {
+        adminData.archive.push(item);
+        adminData.shop = adminData.shop.filter(i => i.id !== itemId);
+      }
+    });
+    
+    selectedItems.clear();
+    saveData();
+    displayItems();
+    showNotification(`${selectedItems.size} items archived`, 'success');
+  }
+}
+
+// Bulk delete items
+function bulkDeleteItems() {
+  if (selectedItems.size === 0) return;
+  
+  if (confirm(`permanently delete ${selectedItems.size} items? this cannot be undone.`)) {
+    selectedItems.forEach(itemId => {
+      adminData.shop = adminData.shop.filter(i => i.id !== itemId);
+    });
+    
+    selectedItems.clear();
+    saveData();
+    displayItems();
+    showNotification(`${selectedItems.size} items deleted`, 'success');
+  }
+}
+
+// Display filtered shop items
+function displayShopItemsFiltered(items) {
+  const container = document.getElementById('shopItems');
+  
+  if (items.length === 0) {
+    container.innerHTML = '<p class="empty-state">No items found matching your filters.</p>';
+    return;
+  }
+
+  container.innerHTML = items.map(item => {
+    const cat = adminData.categories.find(c => c.id == item.category);
+    const categoryName = cat ? cat.name : 'uncategorized';
+    const categoryColor = cat ? cat.color : '#999';
+    const tagsHtml = item.tags ? item.tags.split(',').map(tag => `<span class="item-tag">${tag.trim()}</span>`).join('') : '';
+    
+    return `
+    <div class="item-card${selectedItems.has(item.id) ? ' selected' : ''}">
+      <input type="checkbox" class="item-checkbox" value="${item.id}" onchange="toggleItemSelection(${item.id})" ${selectedItems.has(item.id) ? 'checked' : ''}>
+      ${item.image ? `<img src="${item.image}" alt="${item.name}" class="item-image">` : '<div class="item-image" style="background: rgba(255,255,255,0.1)"></div>'}
+      <div class="item-info">
+        <div class="item-title">${item.name}</div>
+        <div style="font-size: 11px; margin-bottom: 6px;">
+          <span class="item-category" style="background-color: ${categoryColor}22; color: ${categoryColor}; padding: 2px 8px; border-radius: 3px;">${categoryName}</span>
+        </div>
+        <div class="item-description">${item.description}</div>
+        ${tagsHtml ? `<div style="margin: 6px 0; font-size: 11px; display: flex; gap: 4px; flex-wrap: wrap;">${tagsHtml}</div>` : ''}
+        <div class="item-meta">
+          <span>$${item.price}</span>
+          <span>${new Date(item.createdAt).toLocaleDateString()}</span>
+        </div>
+        <div class="item-actions">
+          <button class="btn btn-secondary" onclick="editItem('shop', ${item.id})">edit</button>
+          <button class="btn btn-warning" onclick="archiveItem('shop', ${item.id})">archive</button>
+          <button class="btn btn-danger" onclick="deleteItemFromList('shop', ${item.id})">delete</button>
+        </div>
+      </div>
+    </div>
+  `;
+  }).join('');
 }
 
 // Display shop items
@@ -324,24 +1190,36 @@ function displayShopItems() {
     return;
   }
 
-  container.innerHTML = adminData.shop.map(item => `
-    <div class="item-card">
+  container.innerHTML = adminData.shop.map(item => {
+    const cat = adminData.categories.find(c => c.id == item.category);
+    const categoryName = cat ? cat.name : 'uncategorized';
+    const categoryColor = cat ? cat.color : '#999';
+    const tagsHtml = item.tags ? item.tags.split(',').map(tag => `<span class="item-tag">${tag.trim()}</span>`).join('') : '';
+    
+    return `
+    <div class="item-card${selectedItems.has(item.id) ? ' selected' : ''}">
+      <input type="checkbox" class="item-checkbox" value="${item.id}" onchange="toggleItemSelection(${item.id})" ${selectedItems.has(item.id) ? 'checked' : ''}>
       ${item.image ? `<img src="${item.image}" alt="${item.name}" class="item-image">` : '<div class="item-image" style="background: rgba(255,255,255,0.1)"></div>'}
       <div class="item-info">
         <div class="item-title">${item.name}</div>
+        <div style="font-size: 11px; margin-bottom: 6px;">
+          <span class="item-category" style="background-color: ${categoryColor}22; color: ${categoryColor}; padding: 2px 8px; border-radius: 3px;">${categoryName}</span>
+        </div>
         <div class="item-description">${item.description}</div>
+        ${tagsHtml ? `<div style="margin: 6px 0; font-size: 11px; display: flex; gap: 4px; flex-wrap: wrap;">${tagsHtml}</div>` : ''}
         <div class="item-meta">
           <span>$${item.price}</span>
           <span>${new Date(item.createdAt).toLocaleDateString()}</span>
         </div>
         <div class="item-actions">
-          <button class="btn btn-secondary" onclick="editItem('shop', ${item.id})">Edit</button>
-          <button class="btn btn-warning" onclick="archiveItem('shop', ${item.id})">Archive</button>
-          <button class="btn btn-danger" onclick="deleteItemFromList('shop', ${item.id})">Delete</button>
+          <button class="btn btn-secondary" onclick="editItem('shop', ${item.id})">edit</button>
+          <button class="btn btn-warning" onclick="archiveItem('shop', ${item.id})">archive</button>
+          <button class="btn btn-danger" onclick="deleteItemFromList('shop', ${item.id})">delete</button>
         </div>
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
 }
 
 // Display archive items
@@ -364,9 +1242,9 @@ function displayArchiveItems() {
           <span>${new Date(item.createdAt).toLocaleDateString()}</span>
         </div>
         <div class="item-actions">
-          <button class="btn btn-secondary" onclick="editItem('archive', ${item.id})">Edit</button>
-          <button class="btn btn-success" onclick="unarchiveItem(${item.id})">Unarchive to Shop</button>
-          <button class="btn btn-danger" onclick="deleteItemFromList('archive', ${item.id})">Delete</button>
+          <button class="btn btn-secondary" onclick="editItem('archive', ${item.id})">edit</button>
+          <button class="btn btn-success" onclick="unarchiveItem(${item.id})">unarchive to shop</button>
+          <button class="btn btn-danger" onclick="deleteItemFromList('archive', ${item.id})">delete</button>
         </div>
       </div>
     </div>
@@ -392,8 +1270,8 @@ function displayGalleryItems() {
           <span>${new Date(item.createdAt).toLocaleDateString()}</span>
         </div>
         <div class="item-actions">
-          <button class="btn btn-secondary" onclick="editItem('gallery', ${item.id})">Edit</button>
-          <button class="btn btn-danger" onclick="deleteItemFromList('gallery', ${item.id})">Delete</button>
+          <button class="btn btn-secondary" onclick="editItem('gallery', ${item.id})">edit</button>
+          <button class="btn btn-danger" onclick="deleteItemFromList('gallery', ${item.id})">delete</button>
         </div>
       </div>
     </div>
@@ -409,17 +1287,38 @@ function editItem(type, id) {
   const modalTitle = document.getElementById('modalTitle');
   const modalFormContent = document.getElementById('modalFormContent');
 
-  modalTitle.textContent = `Edit ${type.charAt(0).toUpperCase() + type.slice(1)} Item`;
+  modalTitle.textContent = `edit ${type.charAt(0).toLowerCase() + type.slice(1)} item`;
 
   // Store current editing item
   window.currentEditingItem = { type, id };
 
   if (type === 'shop') {
+    // Build images preview HTML
+    const images = item.images || [item.image];
+    const imagesPreview = images.map((img, idx) => `
+      <div class="image-preview-item" data-image-index="${idx}">
+        <img src="${img}" alt="Image ${idx + 1}">
+        <button type="button" class="btn btn-danger btn-small" onclick="removeImagePreview(${idx})">remove</button>
+      </div>
+    `).join('');
+
     modalFormContent.innerHTML = `
       <input type="text" placeholder="Product Name" class="form-input" value="${item.name}" required>
       <input type="number" placeholder="Price" class="form-input" value="${item.price}" required>
       <textarea placeholder="Product Description" class="form-textarea" required>${item.description}</textarea>
+      
+      <div class="form-group">
+        <label>Product Images</label>
+        <div class="images-preview" id="imagesPreview">
+          ${imagesPreview}
+        </div>
+        <input type="file" accept="image/*" multiple class="form-file" id="editProductImages">
+        <small>Upload additional images or leave empty to keep current ones</small>
+      </div>
     `;
+
+    // Store current images for modal
+    window.currentEditingImages = [...images];
   } else if (type === 'archive') {
     modalFormContent.innerHTML = `
       <input type="text" placeholder="Title" class="form-input" value="${item.title}" required>
@@ -443,20 +1342,37 @@ async function handleModalSubmit(event) {
   if (!window.currentEditingItem) return;
 
   const { type, id } = window.currentEditingItem;
-  const formInputs = document.getElementById('modalFormContent').querySelectorAll('input, textarea');
+  const modalFormContent = document.getElementById('modalFormContent');
   const itemIndex = adminData[type].findIndex(i => i.id === id);
 
   if (itemIndex === -1) return;
 
   if (type === 'shop') {
+    const formInputs = modalFormContent.querySelectorAll('input, textarea');
     adminData[type][itemIndex].name = formInputs[0].value;
     adminData[type][itemIndex].price = formInputs[1].value;
     adminData[type][itemIndex].description = formInputs[2].value;
+
+    // Handle new images if uploaded
+    const imageInput = document.getElementById('editProductImages');
+    if (imageInput && imageInput.files.length > 0) {
+      // Add new images to existing ones
+      for (const file of imageInput.files) {
+        const compressedImage = await readAndCompressFile(file);
+        window.currentEditingImages.push(compressedImage);
+      }
+    }
+
+    // Update images
+    adminData[type][itemIndex].images = window.currentEditingImages;
+    adminData[type][itemIndex].image = window.currentEditingImages[0];
   } else if (type === 'archive') {
+    const formInputs = modalFormContent.querySelectorAll('input, textarea');
     adminData[type][itemIndex].title = formInputs[0].value;
     adminData[type][itemIndex].category = formInputs[1].value;
     adminData[type][itemIndex].description = formInputs[2].value;
   } else if (type === 'gallery') {
+    const formInputs = modalFormContent.querySelectorAll('input, textarea');
     adminData[type][itemIndex].title = formInputs[0].value;
     adminData[type][itemIndex].description = formInputs[1].value;
   }
@@ -464,22 +1380,39 @@ async function handleModalSubmit(event) {
   await saveAdminData(adminData);
   closeModal();
   displayItems();
-  showNotification('Item updated successfully!', 'success');
+  showNotification('item updated successfully!', 'success');
+}
+
+// Remove image from preview in edit modal
+function removeImagePreview(index) {
+  if (window.currentEditingImages) {
+    window.currentEditingImages.splice(index, 1);
+    // Refresh preview
+    const previewContainer = document.getElementById('imagesPreview');
+    if (previewContainer) {
+      previewContainer.innerHTML = window.currentEditingImages.map((img, idx) => `
+        <div class="image-preview-item" data-image-index="${idx}">
+          <img src="${img}" alt="Image ${idx + 1}">
+          <button type="button" class="btn btn-danger btn-small" onclick="removeImagePreview(${idx})">Remove</button>
+        </div>
+      `).join('');
+    }
+  }
 }
 
 // Delete item from list
 async function deleteItemFromList(type, id) {
-  if (confirm('Are you sure you want to delete this item?')) {
+  if (confirm('are you sure you want to delete this item?')) {
     adminData[type] = adminData[type].filter(i => i.id !== id);
     await saveAdminData(adminData);
     displayItems();
-    showNotification('Item deleted!', 'success');
+    showNotification('item deleted!', 'success');
   }
 }
 
 // Archive shop item (move to archive)
 async function archiveItem(type, id) {
-  if (confirm('Move this item to archive?')) {
+  if (confirm('move this item to archive?')) {
     // Find the item in shop
     const itemIndex = adminData[type].findIndex(i => i.id === id);
     if (itemIndex === -1) return;
@@ -510,13 +1443,13 @@ async function archiveItem(type, id) {
     // Save to Firebase
     await saveAdminData(adminData);
     displayItems();
-    showNotification('Item archived successfully!', 'success');
+    showNotification('item archived successfully!', 'success');
   }
 }
 
 // Unarchive item (move back to shop)
 async function unarchiveItem(id) {
-  if (confirm('Move this item back to shop?')) {
+  if (confirm('move this item back to shop?')) {
     // Find the item in archive
     const itemIndex = adminData.archive.findIndex(i => i.id === id);
     if (itemIndex === -1) return;
@@ -546,7 +1479,7 @@ async function unarchiveItem(id) {
     // Save to Firebase
     await saveAdminData(adminData);
     displayItems();
-    showNotification('Item restored to shop!', 'success');
+    showNotification('item restored to shop!', 'success');
   }
 }
 
@@ -563,7 +1496,7 @@ function addNewItem(type) {
 
 // Logout
 function logout() {
-  if (confirm('Are you sure you want to logout?')) {
+  if (confirm('are you sure you want to logout?')) {
     localStorage.removeItem('admin_token');
     window.location.href = '/admin/login.html';
   }
@@ -598,14 +1531,14 @@ function importData(file) {
   reader.onload = async (e) => {
     try {
       const imported = JSON.parse(e.target.result);
-      if (confirm('This will replace all current data. Continue?')) {
+      if (confirm('this will replace all current data. continue?')) {
         adminData = imported;
         await saveAdminData(adminData);
         displayItems();
-        showNotification('Data imported successfully!', 'success');
+        showNotification('data imported successfully!', 'success');
       }
     } catch (error) {
-      showNotification('Error importing data!', 'error');
+      showNotification('error importing data!', 'error');
     }
   };
   reader.readAsText(file);
