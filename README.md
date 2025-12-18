@@ -1,28 +1,38 @@
-# Minimalist website for create brand
+# inverted.exe - E-Commerce Platform
 
-This is a simple web project that demonstrates the use of HTML and CSS to create a basic webpage.
+Production-ready e-commerce website with orders, payments, emails, and customer management.
 
-## Project Structure
+## 📖 Documentation
 
-```
-my-html-project
-├── index.html
-├── styles.css
-└── README.md
-```
+**START HERE:** Pick one based on your need:
 
-## Files Description
+1. **[README_DOCS.md](README_DOCS.md)** - Documentation index & quick reference
+2. **[USER_GUIDE.md](USER_GUIDE.md)** - Complete feature guide for all functionality
+3. **[QUICK_SETUP.md](QUICK_SETUP.md)** - Production setup guide (5-10 minutes)
+4. **[CLEANUP_SUMMARY.md](CLEANUP_SUMMARY.md)** - What changed in this version
 
-- **index.html**: The main HTML document that contains the structure of the webpage, including headings, paragraphs, and links. It links to the `styles.css` file for styling.
+## 🎯 Features
 
-- **styles.css**: This file contains the CSS styles for the HTML document, defining the appearance of elements such as colors, fonts, margins, and layouts.
+- ✅ E-Commerce (products, orders, invoices)
+- ✅ Payments (Stripe, PayPal, Bank Transfer)
+- ✅ Email Notifications (order confirmations, receipts)
+- ✅ Customer Accounts (registration, profiles, orders)
+- ✅ Admin Dashboard (management & analytics)
+- ✅ Analytics & Reports (sales, revenue, insights)
 
-## Setup Instructions
+## 🚀 Get Started
 
-1. Clone the repository or download the project files.
-2. Open the `index.html` file in a web browser to view the webpage.
-3. Modify the `styles.css` file to change the appearance of the webpage as desired.
+1. Read: [QUICK_SETUP.md](QUICK_SETUP.md) (5 min)
+2. Get API keys: Stripe, PayPal
+3. Setup Email: Firebase Cloud Functions
+4. Enable HTTPS
+5. Start selling!
 
-## License
+## 📞 Help
 
-This project is open source and available for anyone to use and modify.
+See [USER_GUIDE.md](USER_GUIDE.md) for complete documentation.
+
+---
+
+**Version 1.0 - Production Ready** ✅
+

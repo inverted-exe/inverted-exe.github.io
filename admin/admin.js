@@ -80,7 +80,7 @@ function getCachedInput(selector) {
 let adminData = (() => {
   try {
     const stored = localStorage.getItem('inverted_admin_data');
-    if (!stored) return { shop: [], archive: [], gallery: [], categories: [], discounts: [] };
+    if (!stored) return { shop: [], archive: [], gallery: [], categories: [], orders: [] };
     
     const parsed = JSON.parse(stored);
     
@@ -90,13 +90,43 @@ let adminData = (() => {
       archive: Array.isArray(parsed?.archive) ? parsed.archive : [],
       gallery: Array.isArray(parsed?.gallery) ? parsed.gallery : [],
       categories: Array.isArray(parsed?.categories) ? parsed.categories : [],
-      discounts: Array.isArray(parsed?.discounts) ? parsed.discounts : []
+      orders: Array.isArray(parsed?.orders) ? parsed.orders : []
     };
   } catch (error) {
     console.error('Error parsing adminData from localStorage:', error);
-    return { shop: [], archive: [], gallery: [], categories: [] };
+    return { shop: [], archive: [], gallery: [], categories: [], orders: [] };
   }
 })();
+
+// Save admin data to localStorage and sync to Firebase
+function saveData() {
+  try {
+    // Validate adminData structure
+    if (!adminData.shop) {
+      console.warn('adminData.shop is missing, initializing...');
+      adminData.shop = [];
+    }
+    
+    // Save to localStorage
+    const dataToSave = JSON.stringify(adminData);
+    localStorage.setItem('inverted_admin_data', dataToSave);
+    
+    console.log('✓ Admin data saved to localStorage', {
+      shopItems: adminData.shop.length,
+      sample: adminData.shop.length > 0 ? adminData.shop[0].stock : null
+    });
+    
+    // Sync to Firebase if available
+    if (typeof debouncedFirebaseSync !== 'undefined') {
+      debouncedFirebaseSync(adminData);
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('✗ Error saving admin data:', error);
+    return false;
+  }
+}
 
 // Initialize admin panel
 document.addEventListener('DOMContentLoaded', () => {
@@ -110,6 +140,12 @@ document.addEventListener('DOMContentLoaded', () => {
       initializeAdminBurger();
       loadAllItems();
       displayItems();
+      
+      // Restore the last selected section from localStorage
+      const lastSection = localStorage.getItem('admin_selected_section');
+      if (lastSection) {
+        switchSection(lastSection);
+      }
     }
   }, 100);
 });
@@ -215,13 +251,22 @@ function switchSection(section) {
   });
 
   // Show selected section
-  document.getElementById(section).classList.add('active');
+  const targetSection = document.getElementById(section);
+  if (targetSection) {
+    targetSection.classList.add('active');
+  }
 
   // Update nav link
   document.querySelectorAll('.admin-nav-link').forEach(link => {
     link.classList.remove('active');
   });
-  document.querySelector(`[data-section="${section}"]`).classList.add('active');
+  const activeLink = document.querySelector(`[data-section="${section}"]`);
+  if (activeLink) {
+    activeLink.classList.add('active');
+  }
+
+  // Save selected section to localStorage
+  localStorage.setItem('admin_selected_section', section);
 }
 
 // Handle form submission
@@ -251,10 +296,18 @@ async function handleSubmit(event, type) {
     if (type === 'shop') {
       item.name = formData.get('productName');
       item.price = formData.get('price');
-      item.stock = parseInt(formData.get('stock')) || 0;
       item.description = formData.get('description');
       item.category = formData.get('category') || '';
       item.tags = formData.get('tags') || '';
+      // Stock per size
+      item.stock = {
+        XS: parseInt(formData.get('stockXS')) || 0,
+        S: parseInt(formData.get('stockS')) || 0,
+        M: parseInt(formData.get('stockM')) || 0,
+        L: parseInt(formData.get('stockL')) || 0,
+        XL: parseInt(formData.get('stockXL')) || 0,
+        XXL: parseInt(formData.get('stockXXL')) || 0
+      };
     } else if (type === 'archive') {
       item.title = formData.get('title');
       item.category = formData.get('category');
@@ -317,12 +370,13 @@ async function handleSubmit(event, type) {
 function displayItems() {
   displayDashboard();
   displayInventory();
-  displayDiscounts();
   displayCategories();
   updateCategorySelects();
   displayShopItems();
   displayArchiveItems();
   displayGalleryItems();
+  displayOrders();
+  displayAnalytics();
 }
 
 // Display dashboard with analytics
@@ -570,118 +624,300 @@ function showCategoryForm() {
 }
 
 // ===== INVENTORY MANAGEMENT FUNCTIONS =====
-// Display inventory table
+// Display inventory table with per-size stock
 function displayInventory() {
   const container = document.getElementById('inventoryTable');
   
   if (adminData.shop.length === 0) {
-    container.innerHTML = '<p class="empty-state">no items in inventory yet</p>';
+    container.innerHTML = '<p class="empty-state">No items in inventory yet</p>';
     updateInventoryStats();
     return;
   }
   
+  const sizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+  
   const inventory = adminData.shop.map(item => {
-    const stock = item.stock || 0;
+    const stock = item.stock || {};
+    const totalStock = sizes.reduce((sum, size) => sum + (parseInt(stock[size]) || 0), 0);
     let status = 'in-stock';
-    if (stock === 0) status = 'out-of-stock';
-    else if (stock <= 5) status = 'low-stock';
+    if (totalStock === 0) status = 'out-of-stock';
+    else if (totalStock <= 10) status = 'low-stock';
     
-    return { item, stock, status };
+    return { item, stock, totalStock, status };
   });
   
-  container.innerHTML = `
-    <table>
-      <thead>
-        <tr>
-          <th>product name</th>
-          <th>category</th>
-          <th>price</th>
-          <th>stock</th>
-          <th>status</th>
-          <th>actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${inventory.map(inv => {
-          const cat = adminData.categories.find(c => c.id == inv.item.category);
-          const categoryName = cat ? cat.name : 'uncategorized';
-          
-          return `
-          <tr>
-            <td>${inv.item.name}</td>
-            <td>${categoryName}</td>
-            <td>$${inv.item.price}</td>
-            <td>
-              <div class="stock-actions">
-                <input type="number" id="stock-${inv.item.id}" value="${inv.stock}" min="0">
-                <button class="btn btn-secondary" onclick="updateStock(${inv.item.id})">update</button>
-              </div>
-            </td>
-            <td>
-              <span class="stock-status">
-                <span class="stock-indicator ${inv.status}"></span>
-                ${inv.status.replace('-', ' ')}
-              </span>
-            </td>
-            <td>
-              <button class="btn btn-secondary" style="font-size: 11px;" onclick="addStockQuick(${inv.item.id}, 10)">+10</button>
-              <button class="btn btn-warning" style="font-size: 11px;" onclick="reduceStockQuick(${inv.item.id}, 1)">-1</button>
-            </td>
-          </tr>
-          `;
-        }).join('')}
-      </tbody>
-    </table>
-  `;
+  container.innerHTML = inventory.map(inv => {
+    const cat = adminData.categories.find(c => c.id == inv.item.category);
+    const categoryName = cat ? cat.name : 'uncategorized';
+    const statusLabel = inv.status.replace('-', ' ');
+    
+    const sizeStocks = sizes.map(size => ({
+      size,
+      count: parseInt(inv.stock[size]) || 0
+    }));
+    
+    return `
+      <div class="inventory-item-card">
+        <div class="inventory-item-header">
+          <div class="inventory-item-title" title="${inv.item.name}">${inv.item.name}</div>
+          <span class="inventory-item-status ${inv.status}">
+            <i class="ri-${inv.status === 'in-stock' ? 'check' : inv.status === 'low-stock' ? 'alert' : 'close'}-line"></i>
+            ${statusLabel}
+          </span>
+        </div>
+        
+        <div class="inventory-item-body">
+          <div class="inventory-item-row">
+            <span class="inventory-item-label">Category</span>
+            <span class="inventory-item-value">${categoryName}</span>
+          </div>
+          <div class="inventory-item-row">
+            <span class="inventory-item-label">Price</span>
+            <span class="inventory-item-value">$${inv.item.price}</span>
+          </div>
+          <div class="inventory-item-row">
+            <span class="inventory-item-label">Total Stock</span>
+            <span class="inventory-item-value">${inv.totalStock} units</span>
+          </div>
+        </div>
+        
+        <div class="inventory-sizes">
+          ${sizeStocks.map(s => `
+            <div class="size-badge">
+              <span class="size-badge-label">${s.size}</span>
+              <span class="size-badge-value">${s.count}</span>
+            </div>
+          `).join('')}
+        </div>
+        
+        <div class="inventory-item-footer">
+          <button class="btn btn-primary" onclick="toggleSizeEditor(${inv.item.id})">
+            <i class="ri-pencil-line"></i> Edit
+          </button>
+          <button class="btn btn-danger" onclick="deleteItem('shop', ${inv.item.id})">
+            <i class="ri-delete-bin-line"></i> Delete
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
   
   updateInventoryStats();
 }
 
-// Update stock quantity
-function updateStock(itemId) {
-  const input = document.getElementById(`stock-${itemId}`);
-  const newStock = parseInt(input.value) || 0;
-  
+// Update all sizes stock for an item
+function toggleSizeEditor(itemId) {
   const item = adminData.shop.find(i => i.id === itemId);
   if (!item) return;
   
-  item.stock = newStock;
-  saveData();
-  displayInventory();
-  showNotification('stock updated', 'success');
+  const modal = document.getElementById('sizeEditorModal');
+  if (!modal) {
+    createSizeEditorModal();
+  }
+  
+  openSizeEditor(itemId);
 }
 
-// Quick add stock
-function addStockQuick(itemId, amount) {
-  const item = adminData.shop.find(i => i.id === itemId);
-  if (!item) return;
+// Create size editor modal if not exists
+function createSizeEditorModal() {
+  if (document.getElementById('sizeEditorModal')) return;
   
-  item.stock = (item.stock || 0) + amount;
-  saveData();
-  displayInventory();
+  const modal = document.createElement('div');
+  modal.id = 'sizeEditorModal';
+  modal.className = 'modal';
+  modal.innerHTML = `
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="sizeEditorTitle">edit stock</h2>
+        <button type="button" class="close-btn" onclick="closeSizeEditor()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="sizeEditorContent"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeSizeEditor()">cancel</button>
+        <button type="button" class="btn btn-success" onclick="saveSizeEditorChanges()">save changes</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
 }
 
-// Quick reduce stock
-function reduceStockQuick(itemId, amount) {
+// Open size editor for specific item
+function openSizeEditor(itemId) {
   const item = adminData.shop.find(i => i.id === itemId);
   if (!item) return;
   
-  item.stock = Math.max(0, (item.stock || 0) - amount);
+  window.currentSizeEditItemId = itemId;
+  const sizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+  const stock = item.stock || {};
+  
+  const content = document.getElementById('sizeEditorContent');
+  content.innerHTML = `
+    <div class="size-editor-form">
+      ${sizes.map(size => `
+        <div class="size-editor-group">
+          <label>${size} Size</label>
+          <input type="number" id="editor-stock-${size}" value="${parseInt(stock[size]) || 0}" min="0" class="form-input">
+        </div>
+      `).join('')}
+    </div>
+  `;
+  
+  const modal = document.getElementById('sizeEditorModal');
+  modal.classList.add('active');
+}
+
+// Close size editor
+function closeSizeEditor() {
+  const modal = document.getElementById('sizeEditorModal');
+  if (modal) {
+    modal.classList.remove('active');
+  }
+  window.currentSizeEditItemId = null;
+}
+
+// Save size editor changes
+function saveSizeEditorChanges() {
+  console.log('🔄 Starting modal stock update');
+  
+  const itemId = window.currentSizeEditItemId;
+  if (!itemId) {
+    console.error('✗ No item ID found');
+    alert('Error: No item selected');
+    return false;
+  }
+  
+  const item = adminData.shop.find(i => i.id === itemId);
+  if (!item) {
+    console.error('✗ Item not found:', itemId);
+    alert('Error: Item not found');
+    return false;
+  }
+  
+  console.log('📦 Found item:', item.name);
+  
+  const sizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+  
+  // Initialize stock object if not exists
+  if (!item.stock || typeof item.stock !== 'object') {
+    console.log('📝 Initializing stock object');
+    item.stock = {};
+  }
+  
+  // Update stock values from modal inputs
+  let hasValidInput = false;
+  const stockValues = {};
+  
+  sizes.forEach(size => {
+    const input = document.getElementById(`editor-stock-${size}`);
+    if (input && input.value !== undefined) {
+      const value = parseInt(input.value);
+      stockValues[size] = isNaN(value) ? 0 : value;
+      item.stock[size] = stockValues[size];
+      hasValidInput = true;
+      console.log(`  ${size}: ${stockValues[size]}`);
+    } else {
+      console.warn(`⚠ Missing input for ${size}`);
+    }
+  });
+  
+  if (!hasValidInput) {
+    console.error('✗ No valid stock inputs found in modal');
+    alert('Error: No valid stock inputs found');
+    return false;
+  }
+  
+  console.log('💾 Stock object prepared:', item.stock);
+  
+  // Save to localStorage
+  const saveSuccess = saveData();
+  if (!saveSuccess) {
+    console.error('✗ Failed to save data');
+    alert('Error: Failed to save stock data');
+    return false;
+  }
+  
+  console.log('✓ Stock saved successfully for item:', itemId);
+  
+  // Verify saved data
+  const saved = localStorage.getItem('inverted_admin_data');
+  if (saved) {
+    const parsedData = JSON.parse(saved);
+    const savedItem = parsedData.shop.find(i => i.id === itemId);
+    if (savedItem) {
+      console.log('✓ Verified saved stock:', savedItem.stock);
+    }
+  }
+  
+  // Close modal
+  closeSizeEditor();
+  
+  // Refresh inventory display
+  displayInventory();
+  
+  // Show success message
+  alert('✓ Stock updated successfully');
+  
+  return true;
+}
+
+// Quick add stock to specific size
+function addStockQuick(itemId, size, amount) {
+  const item = adminData.shop.find(i => i.id === itemId);
+  if (!item) {
+    console.error('Item not found:', itemId);
+    return false;
+  }
+  
+  if (!item.stock || typeof item.stock !== 'object') {
+    item.stock = {};
+  }
+  
+  const currentStock = parseInt(item.stock[size]) || 0;
+  item.stock[size] = currentStock + amount;
+  
   saveData();
   displayInventory();
+  console.log(`Added ${amount} to ${size}: now ${item.stock[size]}`);
+  return true;
+}
+
+// Quick reduce stock from specific size
+function reduceStockQuick(itemId, size, amount) {
+  const item = adminData.shop.find(i => i.id === itemId);
+  if (!item) {
+    console.error('Item not found:', itemId);
+    return false;
+  }
+  
+  if (!item.stock || typeof item.stock !== 'object') {
+    item.stock = {};
+  }
+  
+  const currentStock = parseInt(item.stock[size]) || 0;
+  item.stock[size] = Math.max(0, currentStock - amount);
+  
+  saveData();
+  displayInventory();
+  console.log(`Reduced ${amount} from ${size}: now ${item.stock[size]}`);
+  return true;
 }
 
 // Update inventory stats
 function updateInventoryStats() {
+  const sizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
   const totalItems = adminData.shop.length;
   let inStock = 0;
   let lowStock = 0;
   let outOfStock = 0;
   
   adminData.shop.forEach(item => {
-    const stock = item.stock || 0;
-    if (stock === 0) outOfStock++;
-    else if (stock <= 5) lowStock++;
+    const stock = item.stock || {};
+    const totalStock = sizes.reduce((sum, size) => sum + (parseInt(stock[size]) || 0), 0);
+    
+    if (totalStock === 0) outOfStock++;
+    else if (totalStock <= 10) lowStock++;
     else inStock++;
   });
   
@@ -703,275 +939,119 @@ function updateInventoryStats() {
 // Filter inventory
 function filterInventory() {
   const status = document.getElementById('inventoryStatus').value;
+  const search = document.getElementById('inventorySearch')?.value.toLowerCase() || '';
   const container = document.getElementById('inventoryTable');
+  const sizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
   
   if (adminData.shop.length === 0) {
-    container.innerHTML = '<p class="empty-state">no items in inventory yet</p>';
+    container.innerHTML = '<p class="empty-state">No items in inventory yet</p>';
     return;
   }
   
   let filtered = adminData.shop;
   
+  // Filter by status
   if (status) {
     filtered = filtered.filter(item => {
-      const stock = item.stock || 0;
-      if (status === 'in-stock') return stock > 5;
-      if (status === 'low-stock') return stock > 0 && stock <= 5;
-      if (status === 'out-of-stock') return stock === 0;
+      const stock = item.stock || {};
+      const totalStock = sizes.reduce((sum, size) => sum + (parseInt(stock[size]) || 0), 0);
+      
+      if (status === 'in-stock') return totalStock > 10;
+      if (status === 'low-stock') return totalStock > 0 && totalStock <= 10;
+      if (status === 'out-of-stock') return totalStock === 0;
     });
   }
   
+  // Filter by search
+  if (search) {
+    filtered = filtered.filter(item => {
+      const matchName = item.name.toLowerCase().includes(search);
+      const matchDesc = (item.description && item.description.toLowerCase().includes(search)) || false;
+      return matchName || matchDesc;
+    });
+  }
+  
+  if (filtered.length === 0) {
+    container.innerHTML = '<p class="empty-state">No items match your filters</p>';
+    return;
+  }
+  
   const inventory = filtered.map(item => {
-    const stock = item.stock || 0;
+    const stock = item.stock || {};
+    const totalStock = sizes.reduce((sum, size) => sum + (parseInt(stock[size]) || 0), 0);
     let itemStatus = 'in-stock';
-    if (stock === 0) itemStatus = 'out-of-stock';
-    else if (stock <= 5) itemStatus = 'low-stock';
+    if (totalStock === 0) itemStatus = 'out-of-stock';
+    else if (totalStock <= 10) itemStatus = 'low-stock';
     
-    return { item, stock, status: itemStatus };
+    return { item, stock, totalStock, status: itemStatus };
   });
   
-  container.innerHTML = `
-    <table>
-      <thead>
-        <tr>
-          <th>product name</th>
-          <th>category</th>
-          <th>price</th>
-          <th>stock</th>
-          <th>status</th>
-          <th>actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${inventory.map(inv => {
-          const cat = adminData.categories.find(c => c.id == inv.item.category);
-          const categoryName = cat ? cat.name : 'uncategorized';
-          
-          return `
-          <tr>
-            <td>${inv.item.name}</td>
-            <td>${categoryName}</td>
-            <td>$${inv.item.price}</td>
-            <td>
-              <div class="stock-actions">
-                <input type="number" id="stock-${inv.item.id}" value="${inv.stock}" min="0">
-                <button class="btn btn-secondary" onclick="updateStock(${inv.item.id})">update</button>
-              </div>
-            </td>
-            <td>
-              <span class="stock-status">
-                <span class="stock-indicator ${inv.status}"></span>
-                ${inv.status.replace('-', ' ')}
-              </span>
-            </td>
-            <td>
-              <button class="btn btn-secondary" style="font-size: 11px;" onclick="addStockQuick(${inv.item.id}, 10)">+10</button>
-              <button class="btn btn-warning" style="font-size: 11px;" onclick="reduceStockQuick(${inv.item.id}, 1)">-1</button>
-            </td>
-          </tr>
-          `;
-        }).join('')}
-      </tbody>
-    </table>
-  `;
+  container.innerHTML = inventory.map(inv => {
+    const cat = adminData.categories.find(c => c.id == inv.item.category);
+    const categoryName = cat ? cat.name : 'uncategorized';
+    const statusLabel = inv.status.replace('-', ' ');
+    
+    const sizeStocks = sizes.map(size => ({
+      size,
+      count: parseInt(inv.stock[size]) || 0
+    }));
+    
+    return `
+      <div class="inventory-item-card">
+        <div class="inventory-item-header">
+          <div class="inventory-item-title" title="${inv.item.name}">${inv.item.name}</div>
+          <span class="inventory-item-status ${inv.status}">
+            <i class="ri-${inv.status === 'in-stock' ? 'check' : inv.status === 'low-stock' ? 'alert' : 'close'}-line"></i>
+            ${statusLabel}
+          </span>
+        </div>
+        
+        <div class="inventory-item-body">
+          <div class="inventory-item-row">
+            <span class="inventory-item-label">Category</span>
+            <span class="inventory-item-value">${categoryName}</span>
+          </div>
+          <div class="inventory-item-row">
+            <span class="inventory-item-label">Price</span>
+            <span class="inventory-item-value">$${inv.item.price}</span>
+          </div>
+          <div class="inventory-item-row">
+            <span class="inventory-item-label">Total Stock</span>
+            <span class="inventory-item-value">${inv.totalStock} units</span>
+          </div>
+        </div>
+        
+        <div class="inventory-sizes">
+          ${sizeStocks.map(s => `
+            <div class="size-badge">
+              <span class="size-badge-label">${s.size}</span>
+              <span class="size-badge-value">${s.count}</span>
+            </div>
+          `).join('')}
+        </div>
+        
+        <div class="inventory-item-footer">
+          <button class="btn btn-primary" onclick="toggleSizeEditor(${inv.item.id})">
+            <i class="ri-pencil-line"></i> Edit
+          </button>
+          <button class="btn btn-danger" onclick="deleteItem('shop', ${inv.item.id})">
+            <i class="ri-delete-bin-line"></i> Delete
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 
 // Reset inventory filter
 function resetInventoryFilter() {
   document.getElementById('inventoryStatus').value = '';
+  if (document.getElementById('inventorySearch')) {
+    document.getElementById('inventorySearch').value = '';
+  }
   displayInventory();
 }
 
-// ===== DISCOUNTS & PROMOS FUNCTIONS =====
-// Get next discount ID
-function getNextDiscountId() {
-  if (adminData.discounts.length === 0) return 1;
-  return Math.max(...adminData.discounts.map(d => d.id || 0)) + 1;
-}
-
-// Add discount
-function handleAddDiscount(e) {
-  e.preventDefault();
-  
-  const code = document.getElementById('discountCode').value.toUpperCase();
-  const amount = parseInt(document.getElementById('discountAmount').value);
-  const minOrder = parseFloat(document.getElementById('discountMinOrder').value) || 0;
-  const maxUses = parseInt(document.getElementById('discountMaxUses').value) || 0;
-  const startDate = document.getElementById('discountStart').value;
-  const endDate = document.getElementById('discountEnd').value;
-  const desc = document.getElementById('discountDesc').value;
-  
-  // Check if code already exists
-  if (adminData.discounts.some(d => d.code === code)) {
-    showNotification('discount code already exists', 'error');
-    return;
-  }
-  
-  const newDiscount = {
-    id: getNextDiscountId(),
-    code: code,
-    amount: amount,
-    minOrder: minOrder,
-    maxUses: maxUses,
-    currentUses: 0,
-    description: desc,
-    startDate: startDate,
-    endDate: endDate,
-    createdAt: new Date().toISOString()
-  };
-  
-  adminData.discounts.push(newDiscount);
-  saveData();
-  displayDiscounts();
-  resetDiscountForm();
-  showNotification(`discount code "${code}" created`, 'success');
-}
-
-// Reset discount form
-function resetDiscountForm() {
-  document.getElementById('discountForm').reset();
-  const button = document.getElementById('discountForm').querySelector('button[type="submit"]');
-  button.textContent = 'save discount';
-  button.onclick = null;
-}
-
-// Display discounts
-function displayDiscounts() {
-  const container = document.getElementById('discountsList');
-  
-  if (adminData.discounts.length === 0) {
-    container.innerHTML = '<p class="empty-state">no active discounts yet</p>';
-    displayDiscountStats();
-    return;
-  }
-  
-  const today = new Date().toISOString().split('T')[0];
-  
-  container.innerHTML = adminData.discounts.map(discount => {
-    const isExpired = discount.endDate < today;
-    const isActive = !isExpired && discount.startDate <= today;
-    const usagePercentage = discount.maxUses > 0 ? ((discount.currentUses / discount.maxUses) * 100) : 0;
-    
-    return `
-      <div class="discount-card">
-        <div class="discount-badge ${isExpired ? 'expired' : ''}">
-          ${isExpired ? 'expired' : isActive ? 'active' : 'upcoming'}
-        </div>
-        <div class="discount-code">${discount.code}</div>
-        <div class="discount-amount">${discount.amount}% OFF</div>
-        <div class="discount-info">
-          <p><strong>min order:</strong> $${discount.minOrder}</p>
-          <p><strong>valid:</strong> ${discount.startDate} to ${discount.endDate}</p>
-          <p><strong>uses:</strong> ${discount.currentUses}${discount.maxUses > 0 ? '/' + discount.maxUses : ' (unlimited)'}</p>
-          ${discount.description ? `<p><strong>note:</strong> ${discount.description}</p>` : ''}
-        </div>
-        <div class="discount-actions">
-          <button class="btn btn-secondary" onclick="editDiscount(${discount.id})">edit</button>
-          <button class="btn btn-danger" onclick="deleteDiscount(${discount.id})">delete</button>
-        </div>
-      </div>
-    `;
-  }).join('');
-  
-  displayDiscountStats();
-}
-
-// Edit discount
-function editDiscount(id) {
-  const discount = adminData.discounts.find(d => d.id === id);
-  if (!discount) return;
-  
-  document.getElementById('discountCode').value = discount.code;
-  document.getElementById('discountAmount').value = discount.amount;
-  document.getElementById('discountMinOrder').value = discount.minOrder;
-  document.getElementById('discountMaxUses').value = discount.maxUses;
-  document.getElementById('discountStart').value = discount.startDate;
-  document.getElementById('discountEnd').value = discount.endDate;
-  document.getElementById('discountDesc').value = discount.description || '';
-  
-  const form = document.getElementById('discountForm');
-  const button = form.querySelector('button[type="submit"]');
-  button.textContent = 'update discount';
-  button.onclick = (e) => {
-    e.preventDefault();
-    const code = document.getElementById('discountCode').value.toUpperCase();
-    const amount = parseInt(document.getElementById('discountAmount').value);
-    const minOrder = parseFloat(document.getElementById('discountMinOrder').value) || 0;
-    const maxUses = parseInt(document.getElementById('discountMaxUses').value) || 0;
-    const startDate = document.getElementById('discountStart').value;
-    const endDate = document.getElementById('discountEnd').value;
-    const desc = document.getElementById('discountDesc').value;
-    
-    discount.code = code;
-    discount.amount = amount;
-    discount.minOrder = minOrder;
-    discount.maxUses = maxUses;
-    discount.startDate = startDate;
-    discount.endDate = endDate;
-    discount.description = desc;
-    
-    saveData();
-    displayDiscounts();
-    resetDiscountForm();
-    button.textContent = 'save discount';
-    button.onclick = null;
-    showNotification('discount updated', 'success');
-  };
-}
-
-// Delete discount
-function deleteDiscount(id) {
-  const discount = adminData.discounts.find(d => d.id === id);
-  if (!discount) return;
-  
-  if (confirm(`delete discount code "${discount.code}"?`)) {
-    adminData.discounts = adminData.discounts.filter(d => d.id !== id);
-    saveData();
-    displayDiscounts();
-    showNotification('discount deleted', 'success');
-  }
-}
-
-// Display discount stats
-function displayDiscountStats() {
-  const container = document.getElementById('discountStats');
-  
-  if (adminData.discounts.length === 0) {
-    container.innerHTML = '<p class="empty-state">no discounts created</p>';
-    return;
-  }
-  
-  const today = new Date().toISOString().split('T')[0];
-  const activeCount = adminData.discounts.filter(d => !d.endDate < today && d.startDate <= today).length;
-  const totalUses = adminData.discounts.reduce((sum, d) => sum + d.currentUses, 0);
-  const totalRevenueSaved = adminData.discounts.reduce((sum, d) => {
-    return sum + (d.currentUses * (d.amount / 100) * 50); // Estimate based on avg order
-  }, 0);
-  
-  container.innerHTML = `
-    <div class="discount-stat-card">
-      <div class="discount-stat-label">total discounts</div>
-      <div class="discount-stat-value">${adminData.discounts.length}</div>
-      <div class="discount-stat-sublabel">codes created</div>
-    </div>
-    <div class="discount-stat-card">
-      <div class="discount-stat-label">active now</div>
-      <div class="discount-stat-value">${activeCount}</div>
-      <div class="discount-stat-sublabel">live discounts</div>
-    </div>
-    <div class="discount-stat-card">
-      <div class="discount-stat-label">total uses</div>
-      <div class="discount-stat-value">${totalUses}</div>
-      <div class="discount-stat-sublabel">redemptions</div>
-    </div>
-  `;
-}
-
-// Show discount form
-function showDiscountForm() {
-  document.getElementById('discountForm').scrollIntoView({ behavior: 'smooth' });
-  document.getElementById('discountCode').focus();
-}
 // Filter Shop Items
 function filterShopItems() {
   const searchInput = document.getElementById('shopSearch').value.toLowerCase();
@@ -1025,26 +1105,9 @@ function filterShopItems() {
 function resetShopFilters() {
   document.getElementById('shopSearch').value = '';
   document.getElementById('shopCategory').value = '';
-  document.getElementById('shopPriceRange').value = '10000';
   document.getElementById('shopSortBy').value = 'date-desc';
-  document.getElementById('shopPriceValue').textContent = 'all prices';
   displayShopItems();
 }
-
-// Update price range display
-document.addEventListener('DOMContentLoaded', function() {
-  const priceSlider = document.getElementById('shopPriceRange');
-  if (priceSlider) {
-    priceSlider.addEventListener('input', function() {
-      const maxPrice = this.value;
-      if (maxPrice == 10000) {
-        document.getElementById('shopPriceValue').textContent = 'all prices';
-      } else {
-        document.getElementById('shopPriceValue').textContent = '0 - $' + maxPrice;
-      }
-    });
-  }
-});
 
 // Track selected items for bulk operations
 let selectedItems = new Set();
@@ -1145,39 +1208,48 @@ function displayShopItemsFiltered(items) {
   const container = document.getElementById('shopItems');
   
   if (items.length === 0) {
-    container.innerHTML = '<p class="empty-state">No items found matching your filters.</p>';
+    container.innerHTML = '<p class="empty-state">No products found matching your filters.</p>';
     return;
   }
 
   container.innerHTML = items.map(item => {
     const cat = adminData.categories.find(c => c.id == item.category);
     const categoryName = cat ? cat.name : 'uncategorized';
-    const categoryColor = cat ? cat.color : '#999';
-    const tagsHtml = item.tags ? item.tags.split(',').map(tag => `<span class="item-tag">${tag.trim()}</span>`).join('') : '';
+    const categoryColor = cat ? cat.color : '#6366f1';
+    const tagsHtml = item.tags ? item.tags.split(',').map(tag => `<span class="shop-product-tag">${tag.trim()}</span>`).join('') : '';
+    const image = item.image || (item.images && item.images[0]) || null;
     
     return `
-    <div class="item-card${selectedItems.has(item.id) ? ' selected' : ''}">
-      <input type="checkbox" class="item-checkbox" value="${item.id}" onchange="toggleItemSelection(${item.id})" ${selectedItems.has(item.id) ? 'checked' : ''}>
-      ${item.image ? `<img src="${item.image}" alt="${item.name}" class="item-image">` : '<div class="item-image" style="background: rgba(255,255,255,0.1)"></div>'}
-      <div class="item-info">
-        <div class="item-title">${item.name}</div>
-        <div style="font-size: 11px; margin-bottom: 6px;">
-          <span class="item-category" style="background-color: ${categoryColor}22; color: ${categoryColor}; padding: 2px 8px; border-radius: 3px;">${categoryName}</span>
+      <div class="shop-product-card${selectedItems.has(item.id) ? ' selected' : ''}">
+        <div class="shop-product-checkbox">
+          <input type="checkbox" value="${item.id}" onchange="toggleItemSelection(${item.id})" ${selectedItems.has(item.id) ? 'checked' : ''}>
         </div>
-        <div class="item-description">${item.description}</div>
-        ${tagsHtml ? `<div style="margin: 6px 0; font-size: 11px; display: flex; gap: 4px; flex-wrap: wrap;">${tagsHtml}</div>` : ''}
-        <div class="item-meta">
-          <span>$${item.price}</span>
-          <span>${new Date(item.createdAt).toLocaleDateString()}</span>
-        </div>
-        <div class="item-actions">
-          <button class="btn btn-secondary" onclick="editItem('shop', ${item.id})">edit</button>
-          <button class="btn btn-warning" onclick="archiveItem('shop', ${item.id})">archive</button>
-          <button class="btn btn-danger" onclick="deleteItemFromList('shop', ${item.id})">delete</button>
+        ${image ? `<img src="${image}" alt="${item.name}" class="shop-product-image">` : '<div class="shop-product-image empty"><i class="ri-image-add-line"></i></div>'}
+        <div class="shop-product-info">
+          <div class="shop-product-header">
+            <div class="shop-product-title">${item.name}</div>
+            <div class="shop-product-price">$${item.price}</div>
+          </div>
+          <span class="shop-product-category" style="background-color: ${categoryColor}22; color: ${categoryColor};">${categoryName}</span>
+          <div class="shop-product-description">${item.description}</div>
+          ${tagsHtml ? `<div class="shop-product-tags">${tagsHtml}</div>` : ''}
+          <div class="shop-product-meta">
+            <span>${new Date(item.createdAt).toLocaleDateString()}</span>
+          </div>
+          <div class="shop-product-actions">
+            <button class="btn" onclick="editItem('shop', ${item.id})">
+              <i class="ri-pencil-line"></i> Edit
+            </button>
+            <button class="btn btn-warning" onclick="archiveItem('shop', ${item.id})">
+              <i class="ri-archive-drawer-line"></i> Archive
+            </button>
+            <button class="btn btn-danger" onclick="deleteItemFromList('shop', ${item.id})">
+              <i class="ri-delete-bin-line"></i> Delete
+            </button>
+          </div>
         </div>
       </div>
-    </div>
-  `;
+    `;
   }).join('');
 }
 
@@ -1186,39 +1258,48 @@ function displayShopItems() {
   const container = document.getElementById('shopItems');
   
   if (adminData.shop.length === 0) {
-    container.innerHTML = '<p class="empty-state">No items yet. Add your first product!</p>';
+    container.innerHTML = '<p class="empty-state">No products yet. Add your first product!</p>';
     return;
   }
 
   container.innerHTML = adminData.shop.map(item => {
     const cat = adminData.categories.find(c => c.id == item.category);
     const categoryName = cat ? cat.name : 'uncategorized';
-    const categoryColor = cat ? cat.color : '#999';
-    const tagsHtml = item.tags ? item.tags.split(',').map(tag => `<span class="item-tag">${tag.trim()}</span>`).join('') : '';
+    const categoryColor = cat ? cat.color : '#6366f1';
+    const tagsHtml = item.tags ? item.tags.split(',').map(tag => `<span class="shop-product-tag">${tag.trim()}</span>`).join('') : '';
+    const image = item.image || (item.images && item.images[0]) || null;
     
     return `
-    <div class="item-card${selectedItems.has(item.id) ? ' selected' : ''}">
-      <input type="checkbox" class="item-checkbox" value="${item.id}" onchange="toggleItemSelection(${item.id})" ${selectedItems.has(item.id) ? 'checked' : ''}>
-      ${item.image ? `<img src="${item.image}" alt="${item.name}" class="item-image">` : '<div class="item-image" style="background: rgba(255,255,255,0.1)"></div>'}
-      <div class="item-info">
-        <div class="item-title">${item.name}</div>
-        <div style="font-size: 11px; margin-bottom: 6px;">
-          <span class="item-category" style="background-color: ${categoryColor}22; color: ${categoryColor}; padding: 2px 8px; border-radius: 3px;">${categoryName}</span>
+      <div class="shop-product-card${selectedItems.has(item.id) ? ' selected' : ''}">
+        <div class="shop-product-checkbox">
+          <input type="checkbox" value="${item.id}" onchange="toggleItemSelection(${item.id})" ${selectedItems.has(item.id) ? 'checked' : ''}>
         </div>
-        <div class="item-description">${item.description}</div>
-        ${tagsHtml ? `<div style="margin: 6px 0; font-size: 11px; display: flex; gap: 4px; flex-wrap: wrap;">${tagsHtml}</div>` : ''}
-        <div class="item-meta">
-          <span>$${item.price}</span>
-          <span>${new Date(item.createdAt).toLocaleDateString()}</span>
-        </div>
-        <div class="item-actions">
-          <button class="btn btn-secondary" onclick="editItem('shop', ${item.id})">edit</button>
-          <button class="btn btn-warning" onclick="archiveItem('shop', ${item.id})">archive</button>
-          <button class="btn btn-danger" onclick="deleteItemFromList('shop', ${item.id})">delete</button>
+        ${image ? `<img src="${image}" alt="${item.name}" class="shop-product-image">` : '<div class="shop-product-image empty"><i class="ri-image-add-line"></i></div>'}
+        <div class="shop-product-info">
+          <div class="shop-product-header">
+            <div class="shop-product-title">${item.name}</div>
+            <div class="shop-product-price">$${item.price}</div>
+          </div>
+          <span class="shop-product-category" style="background-color: ${categoryColor}22; color: ${categoryColor};">${categoryName}</span>
+          <div class="shop-product-description">${item.description}</div>
+          ${tagsHtml ? `<div class="shop-product-tags">${tagsHtml}</div>` : ''}
+          <div class="shop-product-meta">
+            <span>${new Date(item.createdAt).toLocaleDateString()}</span>
+          </div>
+          <div class="shop-product-actions">
+            <button class="btn" onclick="editItem('shop', ${item.id})">
+              <i class="ri-pencil-line"></i> Edit
+            </button>
+            <button class="btn btn-warning" onclick="archiveItem('shop', ${item.id})">
+              <i class="ri-archive-drawer-line"></i> Archive
+            </button>
+            <button class="btn btn-danger" onclick="deleteItemFromList('shop', ${item.id})">
+              <i class="ri-delete-bin-line"></i> Delete
+            </button>
+          </div>
         </div>
       </div>
-    </div>
-  `;
+    `;
   }).join('');
 }
 
@@ -1543,3 +1624,725 @@ function importData(file) {
   };
   reader.readAsText(file);
 }
+
+// ===== ORDERS MANAGEMENT FUNCTIONS =====
+// Get next order ID
+function getNextOrderId() {
+  if (adminData.orders.length === 0) return 1001;
+  return Math.max(...adminData.orders.map(o => o.id || 0)) + 1;
+}
+
+// Display orders table
+function displayOrders() {
+  const container = document.getElementById('ordersTable');
+  
+  if (adminData.orders.length === 0) {
+    container.innerHTML = '<p class="empty-state">no orders yet</p>';
+    updateOrderStats();
+    return;
+  }
+
+  const statusFilter = document.getElementById('orderStatus')?.value || '';
+  let orders = adminData.orders;
+
+  if (statusFilter) {
+    orders = orders.filter(o => o.status === statusFilter);
+  }
+
+  container.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>order id</th>
+          <th>customer</th>
+          <th>date</th>
+          <th>total</th>
+          <th>items</th>
+          <th>status</th>
+          <th>actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${orders.map(order => `
+          <tr>
+            <td>#${order.id}</td>
+            <td>${order.customerName || 'N/A'}</td>
+            <td>${new Date(order.date).toLocaleDateString()}</td>
+            <td>$${order.total.toFixed(2)}</td>
+            <td>${order.items.length} items</td>
+            <td>
+              <span class="order-status ${order.status}">
+                ${order.status}
+              </span>
+            </td>
+            <td>
+              <button class="btn btn-secondary" style="font-size: 11px;" onclick="viewOrderDetails(${order.id})">view</button>
+              <button class="btn btn-primary" style="font-size: 11px;" onclick="downloadInvoice(${order.id})">invoice</button>
+            </td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+
+  updateOrderStats();
+}
+
+// Update order stats
+function updateOrderStats() {
+  const totalOrders = adminData.orders.length;
+  const pending = adminData.orders.filter(o => o.status === 'pending').length;
+  const completed = adminData.orders.filter(o => o.status === 'completed').length;
+  const totalRevenue = adminData.orders.reduce((sum, o) => sum + (o.total || 0), 0);
+
+  document.getElementById('totalOrders').textContent = totalOrders;
+  document.getElementById('pendingOrders').textContent = pending;
+  document.getElementById('completedOrders').textContent = completed;
+  document.getElementById('totalRevenue').textContent = '$' + totalRevenue.toFixed(2);
+}
+
+// Filter orders
+function filterOrders() {
+  displayOrders();
+}
+
+// Reset order filters
+function resetOrderFilters() {
+  document.getElementById('orderStatus').value = '';
+  displayOrders();
+}
+
+// Create new order
+function createOrder(customerName, customerEmail, items) {
+  const newOrder = {
+    id: getNextOrderId(),
+    customerName: customerName,
+    customerEmail: customerEmail,
+    items: items,
+    total: items.reduce((sum, item) => sum + (item.price * item.quantity), 0),
+    status: 'pending',
+    date: new Date().toISOString(),
+    shippingAddress: '',
+    notes: '',
+    paymentMethod: '',
+    paymentStatus: 'unpaid'
+  };
+
+  adminData.orders.push(newOrder);
+  saveData();
+  displayOrders();
+  showNotification(`order #${newOrder.id} created`, 'success');
+  return newOrder;
+}
+
+// View order details
+function viewOrderDetails(orderId) {
+  const order = adminData.orders.find(o => o.id === orderId);
+  if (!order) return;
+
+  const modal = document.getElementById('orderModal');
+  const content = document.getElementById('orderModalContent');
+
+  content.innerHTML = `
+    <div style="padding: 20px;">
+      <h4>Order #${order.id}</h4>
+      <p><strong>Customer:</strong> ${order.customerName}</p>
+      <p><strong>Email:</strong> ${order.customerEmail}</p>
+      <p><strong>Date:</strong> ${new Date(order.date).toLocaleString()}</p>
+      <p><strong>Status:</strong> <span class="order-status ${order.status}">${order.status}</span></p>
+      <p><strong>Payment Status:</strong> ${order.paymentStatus}</p>
+      
+      <h4 style="margin-top: 20px;">Items</h4>
+      <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr style="border-bottom: 2px solid #ddd;">
+            <th style="text-align: left; padding: 10px;">Product</th>
+            <th style="text-align: center;">Quantity</th>
+            <th style="text-align: right;">Price</th>
+            <th style="text-align: right;">Subtotal</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${order.items.map(item => `
+            <tr style="border-bottom: 1px solid #eee;">
+              <td style="padding: 10px;">${item.name}</td>
+              <td style="text-align: center;">${item.quantity}</td>
+              <td style="text-align: right;">$${item.price.toFixed(2)}</td>
+              <td style="text-align: right;">$${(item.price * item.quantity).toFixed(2)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+
+      <div style="margin-top: 15px; padding-top: 15px; border-top: 2px solid #ddd; text-align: right;">
+        <h3>Total: $${order.total.toFixed(2)}</h3>
+      </div>
+
+      <div style="margin-top: 20px;">
+        <label>Update Status</label>
+        <select id="orderStatusSelect" class="form-input" value="${order.status}">
+          <option value="pending">Pending</option>
+          <option value="processing">Processing</option>
+          <option value="completed">Completed</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+      </div>
+    </div>
+  `;
+
+  modal.style.display = 'flex';
+  window.currentOrderId = orderId;
+}
+
+// Close order modal
+function closeOrderModal() {
+  document.getElementById('orderModal').style.display = 'none';
+  window.currentOrderId = null;
+}
+
+// Update order status
+function updateOrderStatus() {
+  if (!window.currentOrderId) return;
+
+  const order = adminData.orders.find(o => o.id === window.currentOrderId);
+  if (!order) return;
+
+  const newStatus = document.getElementById('orderStatusSelect').value;
+  order.status = newStatus;
+  saveData();
+  displayOrders();
+  closeOrderModal();
+  showNotification('order status updated', 'success');
+}
+
+// ===== INVOICE FUNCTIONS =====
+// Download invoice as PDF
+function downloadInvoice(orderId) {
+  const order = adminData.orders.find(o => o.id === orderId);
+  if (!order) return;
+
+  const invoiceContent = generateInvoiceHTML(order);
+  const printWindow = window.open('', '', 'width=800,height=600');
+  printWindow.document.write(invoiceContent);
+  printWindow.document.close();
+  printWindow.print();
+}
+
+// Print invoice
+function printInvoice() {
+  if (!window.currentOrderId) return;
+  downloadInvoice(window.currentOrderId);
+}
+
+// Generate invoice HTML
+function generateInvoiceHTML(order) {
+  const date = new Date(order.date);
+  const today = new Date();
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>Invoice #${order.id}</title>
+      <style>
+        body {
+          font-family: Arial, sans-serif;
+          margin: 0;
+          padding: 20px;
+          background: white;
+        }
+        .invoice-container {
+          max-width: 800px;
+          margin: 0 auto;
+          border: 1px solid #ddd;
+          padding: 40px;
+        }
+        .invoice-header {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 40px;
+          border-bottom: 2px solid #333;
+          padding-bottom: 20px;
+        }
+        .invoice-title {
+          font-size: 28px;
+          font-weight: bold;
+        }
+        .invoice-number {
+          text-align: right;
+        }
+        .invoice-number h2 {
+          margin: 0;
+          font-size: 20px;
+        }
+        .invoice-number p {
+          margin: 5px 0;
+          color: #666;
+        }
+        .company-info {
+          margin-bottom: 40px;
+        }
+        .company-info h3 {
+          margin-top: 0;
+        }
+        .invoice-details {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 40px;
+        }
+        .detail-section {
+          flex: 1;
+        }
+        .detail-section h4 {
+          margin-top: 0;
+          border-bottom: 1px solid #ddd;
+          padding-bottom: 10px;
+        }
+        .detail-section p {
+          margin: 5px 0;
+          color: #666;
+        }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-bottom: 30px;
+        }
+        thead {
+          background: #f5f5f5;
+        }
+        th {
+          text-align: left;
+          padding: 12px;
+          border: 1px solid #ddd;
+          font-weight: bold;
+        }
+        td {
+          padding: 12px;
+          border: 1px solid #ddd;
+        }
+        .text-right {
+          text-align: right;
+        }
+        .total-section {
+          display: flex;
+          justify-content: flex-end;
+          margin-bottom: 40px;
+        }
+        .total-box {
+          width: 300px;
+        }
+        .total-row {
+          display: flex;
+          justify-content: space-between;
+          padding: 10px 0;
+          border-bottom: 1px solid #ddd;
+        }
+        .total-amount {
+          display: flex;
+          justify-content: space-between;
+          padding: 15px 0;
+          border-top: 2px solid #333;
+          font-weight: bold;
+          font-size: 16px;
+        }
+        .footer {
+          text-align: center;
+          color: #666;
+          font-size: 12px;
+          border-top: 1px solid #ddd;
+          padding-top: 20px;
+          margin-top: 40px;
+        }
+        @media print {
+          body {
+            padding: 0;
+            margin: 0;
+          }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="invoice-container">
+        <div class="invoice-header">
+          <div>
+            <div class="invoice-title">INVOICE</div>
+            <p style="color: #666; margin: 10px 0 0 0;">inverted.exe</p>
+          </div>
+          <div class="invoice-number">
+            <h2>#${order.id}</h2>
+            <p>Invoice Date: ${today.toLocaleDateString()}</p>
+            <p>Order Date: ${date.toLocaleDateString()}</p>
+          </div>
+        </div>
+
+        <div class="company-info">
+          <h3>inverted.exe</h3>
+          <p>Professional Digital Solutions</p>
+          <p>Email: support@inverted.exe</p>
+        </div>
+
+        <div class="invoice-details">
+          <div class="detail-section">
+            <h4>Bill To</h4>
+            <p><strong>${order.customerName}</strong></p>
+            <p>${order.customerEmail}</p>
+            <p>${order.shippingAddress || 'Address not provided'}</p>
+          </div>
+          <div class="detail-section">
+            <h4>Order Details</h4>
+            <p><strong>Status:</strong> ${order.status}</p>
+            <p><strong>Payment:</strong> ${order.paymentStatus}</p>
+            <p><strong>Method:</strong> ${order.paymentMethod || 'Not specified'}</p>
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th class="text-right">Qty</th>
+              <th class="text-right">Unit Price</th>
+              <th class="text-right">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${order.items.map(item => `
+              <tr>
+                <td>${item.name}</td>
+                <td class="text-right">${item.quantity}</td>
+                <td class="text-right">$${item.price.toFixed(2)}</td>
+                <td class="text-right">$${(item.price * item.quantity).toFixed(2)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+
+        <div class="total-section">
+          <div class="total-box">
+            <div class="total-row">
+              <span>Subtotal:</span>
+              <span>$${order.total.toFixed(2)}</span>
+            </div>
+            <div class="total-row">
+              <span>Tax:</span>
+              <span>$0.00</span>
+            </div>
+            <div class="total-amount">
+              <span>Total:</span>
+              <span>$${order.total.toFixed(2)}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="footer">
+          <p>Thank you for your business!</p>
+          <p>This is an automated invoice. Please contact support@inverted.exe for any inquiries.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+// ===== ANALYTICS FUNCTIONS =====
+// Display analytics dashboard
+function displayAnalytics() {
+  updateAnalyticsMetrics();
+  displayTopProducts();
+  generateSalesChart();
+  generateCategoryChart();
+}
+
+// Update analytics metrics
+function updateAnalyticsMetrics() {
+  const startDate = document.getElementById('analyticsStartDate')?.value;
+  const endDate = document.getElementById('analyticsEndDate')?.value;
+
+  let filteredOrders = adminData.orders;
+
+  if (startDate && endDate) {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    filteredOrders = filteredOrders.filter(o => {
+      const orderDate = new Date(o.date);
+      return orderDate >= start && orderDate <= end;
+    });
+  }
+
+  const totalRevenue = filteredOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+  const totalOrders = filteredOrders.length;
+  const avgOrder = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+  const totalItems = filteredOrders.reduce((sum, o) => sum + o.items.reduce((s, i) => s + i.quantity, 0), 0);
+
+  document.getElementById('analyticsRevenue').textContent = '$' + totalRevenue.toFixed(2);
+  document.getElementById('analyticsTotalOrders').textContent = totalOrders;
+  document.getElementById('analyticsAvgOrder').textContent = '$' + avgOrder.toFixed(2);
+  document.getElementById('analyticsItemsSold').textContent = totalItems;
+}
+
+// Display top products
+function displayTopProducts() {
+  const container = document.getElementById('topProductsTable');
+
+  // Count sales by product
+  const productSales = {};
+  adminData.orders.forEach(order => {
+    order.items.forEach(item => {
+      if (!productSales[item.id]) {
+        productSales[item.id] = { name: item.name, quantity: 0, revenue: 0 };
+      }
+      productSales[item.id].quantity += item.quantity;
+      productSales[item.id].revenue += item.price * item.quantity;
+    });
+  });
+
+  const topProducts = Object.values(productSales)
+    .sort((a, b) => b.revenue - a.revenue)
+    .slice(0, 10);
+
+  if (topProducts.length === 0) {
+    container.innerHTML = '<p class="empty-state">no sales data yet</p>';
+    return;
+  }
+
+  container.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>product name</th>
+          <th>units sold</th>
+          <th>revenue</th>
+          <th>avg price</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${topProducts.map((product, index) => `
+          <tr>
+            <td>${index + 1}. ${product.name}</td>
+            <td>${product.quantity}</td>
+            <td>$${product.revenue.toFixed(2)}</td>
+            <td>$${(product.revenue / product.quantity).toFixed(2)}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+// Generate sales chart (simple text-based)
+function generateSalesChart() {
+  const container = document.getElementById('salesChart');
+  
+  // Group sales by day
+  const salesByDay = {};
+  adminData.orders.forEach(order => {
+    const day = new Date(order.date).toLocaleDateString();
+    if (!salesByDay[day]) {
+      salesByDay[day] = 0;
+    }
+    salesByDay[day] += order.total;
+  });
+
+  if (Object.keys(salesByDay).length === 0) {
+    container.innerHTML = '<p class="empty-state">no sales data</p>';
+    return;
+  }
+
+  const maxRevenue = Math.max(...Object.values(salesByDay));
+  const chartHTML = Object.entries(salesByDay)
+    .map(([day, revenue]) => {
+      const percentage = (revenue / maxRevenue) * 100;
+      return `
+        <div style="margin-bottom: 15px;">
+          <div style="font-size: 12px; margin-bottom: 5px;">
+            ${day} - $${revenue.toFixed(2)}
+          </div>
+          <div style="background: #f0f0f0; height: 20px; border-radius: 4px; overflow: hidden;">
+            <div style="background: #4CAF50; height: 100%; width: ${percentage}%;"></div>
+          </div>
+        </div>
+      `;
+    })
+    .join('');
+
+  container.innerHTML = chartHTML;
+}
+
+// Generate category chart
+function generateCategoryChart() {
+  const container = document.getElementById('categoryChart');
+
+  // Calculate revenue by category
+  const revenueByCategory = {};
+  adminData.orders.forEach(order => {
+    order.items.forEach(item => {
+      const category = item.category || 'Uncategorized';
+      if (!revenueByCategory[category]) {
+        revenueByCategory[category] = 0;
+      }
+      revenueByCategory[category] += item.price * item.quantity;
+    });
+  });
+
+  if (Object.keys(revenueByCategory).length === 0) {
+    container.innerHTML = '<p class="empty-state">no category data</p>';
+    return;
+  }
+
+  const totalRevenue = Object.values(revenueByCategory).reduce((a, b) => a + b, 0);
+  const chartHTML = Object.entries(revenueByCategory)
+    .map(([category, revenue]) => {
+      const percentage = (revenue / totalRevenue) * 100;
+      return `
+        <div style="margin-bottom: 15px;">
+          <div style="font-size: 12px; margin-bottom: 5px;">
+            ${category} - $${revenue.toFixed(2)} (${percentage.toFixed(1)}%)
+          </div>
+          <div style="background: #f0f0f0; height: 20px; border-radius: 4px; overflow: hidden;">
+            <div style="background: #2196F3; height: 100%; width: ${percentage}%;"></div>
+          </div>
+        </div>
+      `;
+    })
+    .join('');
+
+  container.innerHTML = chartHTML;
+}
+
+// Filter analytics
+function filterAnalytics() {
+  updateAnalyticsMetrics();
+  displayTopProducts();
+  generateSalesChart();
+  generateCategoryChart();
+}
+
+// Reset analytics
+function resetAnalytics() {
+  document.getElementById('analyticsStartDate').value = '';
+  document.getElementById('analyticsEndDate').value = '';
+  filterAnalytics();
+}
+
+// Export analytics to CSV
+function exportAnalyticsCSV() {
+  let csv = 'Order ID,Customer,Date,Total,Status,Items Count\n';
+  
+  adminData.orders.forEach(order => {
+    csv += `${order.id},"${order.customerName}","${new Date(order.date).toLocaleDateString()}","${order.total.toFixed(2)}","${order.status}",${order.items.length}\n`;
+  });
+
+  downloadFile(csv, 'analytics-report.csv', 'text/csv');
+}
+
+// Export analytics to PDF
+function exportAnalyticsPDF() {
+  const totalRevenue = adminData.orders.reduce((sum, o) => sum + (o.total || 0), 0);
+  const totalOrders = adminData.orders.length;
+
+  const pdfContent = `
+    ANALYTICS REPORT
+    inverted.exe
+    Generated: ${new Date().toLocaleString()}
+    
+    KEY METRICS
+    ====================
+    Total Revenue: $${totalRevenue.toFixed(2)}
+    Total Orders: ${totalOrders}
+    Average Order Value: $${(totalOrders > 0 ? totalRevenue / totalOrders : 0).toFixed(2)}
+    
+    TOP PRODUCTS
+    ====================
+  `;
+
+  const productSales = {};
+  adminData.orders.forEach(order => {
+    order.items.forEach(item => {
+      if (!productSales[item.id]) {
+        productSales[item.id] = { name: item.name, quantity: 0, revenue: 0 };
+      }
+      productSales[item.id].quantity += item.quantity;
+      productSales[item.id].revenue += item.price * item.quantity;
+    });
+  });
+
+  const topProducts = Object.values(productSales)
+    .sort((a, b) => b.revenue - a.revenue)
+    .slice(0, 10);
+
+  let content = pdfContent;
+  topProducts.forEach((product, i) => {
+    content += `${i + 1}. ${product.name} - ${product.quantity} units - $${product.revenue.toFixed(2)}\n`;
+  });
+
+  downloadFile(content, 'analytics-report.txt', 'text/plain');
+  showNotification('report exported as text. convert to PDF using your browser print feature.', 'info');
+}
+
+// Helper: Download file
+function downloadFile(content, filename, type) {
+  const blob = new Blob([content], { type: type });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url);
+}
+
+// Add CSS for order status styling
+const style = document.createElement('style');
+style.textContent = `
+  .order-status {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+  }
+  
+  .order-status.pending {
+    background: #fff3cd;
+    color: #856404;
+  }
+  
+  .order-status.processing {
+    background: #cfe2ff;
+    color: #084298;
+  }
+  
+  .order-status.completed {
+    background: #d1e7dd;
+    color: #0f5132;
+  }
+  
+  .order-status.cancelled {
+    background: #f8d7da;
+    color: #842029;
+  }
+  
+  .analytics-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin: 20px 0;
+  }
+  
+  .chart-box {
+    background: #f9f9f9;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #eee;
+  }
+  
+  .chart-placeholder {
+    background: white;
+    padding: 20px;
+    border-radius: 4px;
+    min-height: 300px;
+  }
+`;
+document.head.appendChild(style);

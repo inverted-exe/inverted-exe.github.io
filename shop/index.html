@@ -40,10 +40,11 @@
       <a href="/"><img src="../image/brand.png" alt="inverted.exe" /></a>
     </div>
 
-    <div class="lang-toggle">
-      <button class="lang-btn active" data-lang="en">ENG</button>
-      <span class="lang-separator">/</span>
-      <button class="lang-btn" data-lang="id">ID</button>
+    <div class="nav-right">
+      <a href="../checkout.html" class="nav-action cart-btn" title="Shopping Cart">
+        <i class="ri-shopping-cart-line"></i>
+        <span class="cart-count" id="cartCount"></span>
+      </a>
     </div>
   </header>
 
@@ -66,5 +67,11 @@
   <div class="mobile-nav-overlay" id="mobileNav"></div>
 
   <script src="../script.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      displayShopItems();
+      updateCartCount();
+    });
+  </script>
 </body>
 </html>

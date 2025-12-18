@@ -13,16 +13,16 @@
 </head>
 <body>
   <div class="admin-container">
-    <!-- Sidebar Toggle Burger (Mobile) -->
-    <button class="admin-burger" aria-label="toggle sidebar" id="adminBurger">
-      <i class="ri-menu-line"></i>
-      <i class="ri-close-line"></i>
-    </button>
-
     <!-- Sidebar -->
     <aside class="admin-sidebar">
       <div class="admin-logo">
-        <h2></h2>
+        <div class="logo-section">
+          <i class="ri-dashboard-line"></i>
+          <div class="logo-text">
+            <h2>inverted</h2>
+            <p>admin panel</p>
+          </div>
+        </div>
       </div>
       
       <nav class="admin-nav">
@@ -31,9 +31,6 @@
         </a>
         <a href="#inventory" class="admin-nav-link" data-section="inventory">
           <i class="ri-stock-line"></i> <span class="nav-text">inventory</span>
-        </a>
-        <a href="#discounts" class="admin-nav-link" data-section="discounts">
-          <i class="ri-ticket-line"></i> <span class="nav-text">discounts</span>
         </a>
         <a href="#categories" class="admin-nav-link" data-section="categories">
           <i class="ri-folder-line"></i> <span class="nav-text">categories</span>
@@ -58,13 +55,12 @@
 
     <!-- Main Content -->
     <main class="admin-main">
-      <header class="admin-header">
-        <h1>content management</h1>
-        <div class="admin-user">
-          <span>welcome, admin</span>
-          <i class="ri-user-3-line"></i>
-        </div>
-      </header>
+      <!-- Content Header with Burger -->
+      <div class="admin-content-header">
+        <button class="admin-burger" aria-label="toggle sidebar" id="adminBurger">
+          <i class="ri-menu-line"></i>
+        </button>
+      </div>
 
       <div class="admin-content">
         <!-- DASHBOARD Section -->
@@ -129,93 +125,61 @@
             </div>
           </div>
 
-          <!-- Inventory Stats -->
+          <!-- Inventory Stats Cards -->
           <div class="inventory-stats">
-            <div class="stat-box">
-              <div class="stat-label">total items</div>
+            <div class="stat-item">
               <div class="stat-number" id="totalInventoryItems">0</div>
+              <div class="stat-label">Total Items</div>
+              <div class="stat-icon"><i class="ri-box-3-line"></i></div>
             </div>
-            <div class="stat-box">
-              <div class="stat-label">in stock</div>
+            <div class="stat-item in-stock">
               <div class="stat-number" id="inStockItems">0</div>
+              <div class="stat-label">In Stock</div>
+              <div class="stat-icon"><i class="ri-check-line"></i></div>
             </div>
-            <div class="stat-box">
-              <div class="stat-label">low stock</div>
-              <div class="stat-number warning" id="lowStockItems">0</div>
+            <div class="stat-item low-stock">
+              <div class="stat-number" id="lowStockItems">0</div>
+              <div class="stat-label">Low Stock</div>
+              <div class="stat-icon"><i class="ri-alert-line"></i></div>
             </div>
-            <div class="stat-box">
-              <div class="stat-label">out of stock</div>
-              <div class="stat-number danger" id="outOfStockItems">0</div>
+            <div class="stat-item out-of-stock">
+              <div class="stat-number" id="outOfStockItems">0</div>
+              <div class="stat-label">Out of Stock</div>
+              <div class="stat-icon"><i class="ri-close-line"></i></div>
             </div>
           </div>
 
-          <!-- Inventory Filter -->
-          <div class="filter-bar">
-            <div class="filter-group">
-              <label>status</label>
-              <select id="inventoryStatus" class="filter-select" onchange="filterInventory()">
-                <option value="">all status</option>
-                <option value="in-stock">in stock</option>
-                <option value="low-stock">low stock</option>
-                <option value="out-of-stock">out of stock</option>
-              </select>
-            </div>
-            <button class="btn btn-secondary" onclick="resetInventoryFilter()">reset</button>
-          </div>
-
-          <!-- Inventory Table -->
-          <div class="items-list">
-            <h3>stock levels</h3>
-            <div id="inventoryTable" class="inventory-table">
-              <p class="empty-state">no items in inventory yet</p>
-            </div>
-          </div>
-        </section>
-
-        <!-- DISCOUNTS & PROMOS Section -->
-        <section id="discounts" class="admin-section">
-          <div class="section-header">
-            <h2>discounts & promos</h2>
-            <button class="btn btn-primary" onclick="showDiscountForm()">
-              <i class="ri-add-line"></i> add discount
-            </button>
-          </div>
-
-          <!-- Add Discount Form -->
-          <div class="form-group">
-            <label>create discount code</label>
-            <form class="admin-form" id="discountForm" onsubmit="handleAddDiscount(event)">
-              <div class="form-row">
-                <input type="text" id="discountCode" placeholder="Code (e.g., SAVE20)" class="form-input" required>
-                <input type="number" id="discountAmount" placeholder="Discount %" class="form-input" min="1" max="100" required>
+          <!-- Inventory Filter Bar -->
+          <div class="inventory-filter-bar">
+            <div class="filter-wrapper">
+              <div class="filter-group">
+                <label for="inventorySearch">Search Items</label>
+                <div class="search-input">
+                  <i class="ri-search-line"></i>
+                  <input type="text" id="inventorySearch" placeholder="Search by name or size..." onkeyup="filterInventory()">
+                </div>
               </div>
-              <div class="form-row">
-                <input type="number" id="discountMinOrder" placeholder="Min Order ($)" class="form-input" min="0" value="0">
-                <input type="number" id="discountMaxUses" placeholder="Max Uses (0 = unlimited)" class="form-input" min="0" value="0">
-              </div>
-              <div class="form-row">
-                <input type="date" id="discountStart" class="form-input" required>
-                <input type="date" id="discountEnd" class="form-input" required>
-              </div>
-              <textarea id="discountDesc" placeholder="Description" class="form-textarea"></textarea>
-              <button type="submit" class="btn btn-success">save discount</button>
-              <button type="button" class="btn btn-secondary" onclick="resetDiscountForm()">cancel</button>
-            </form>
-          </div>
 
-          <!-- Active Discounts -->
-          <div class="items-list">
-            <h3>active discounts</h3>
-            <div id="discountsList" class="discounts-grid">
-              <p class="empty-state">no active discounts yet</p>
+              <div class="filter-group">
+                <label for="inventoryStatus">Filter by Status</label>
+                <select id="inventoryStatus" onchange="filterInventory()">
+                  <option value="">All Status</option>
+                  <option value="in-stock">In Stock</option>
+                  <option value="low-stock">Low Stock</option>
+                  <option value="out-of-stock">Out of Stock</option>
+                </select>
+              </div>
+
+              <button class="btn btn-secondary" onclick="resetInventoryFilter()">
+                <i class="ri-refresh-line"></i> Reset
+              </button>
             </div>
           </div>
 
-          <!-- Discount Usage Stats -->
-          <div class="items-list">
-            <h3>usage statistics</h3>
-            <div id="discountStats" class="discount-stats">
-              <p class="empty-state">no discounts created</p>
+          <!-- Inventory Table/Cards Container -->
+          <div id="inventoryContainer" class="inventory-display">
+            <div id="inventoryTable" class="inventory-grid">
+              <p class="empty-state">No items in inventory yet</p>
             </div>
           </div>
         </section>
@@ -255,19 +219,19 @@
         <!-- SHOP Section -->
         <section id="shop" class="admin-section">
           <div class="section-header">
-            <h2>shop items</h2>
+            <h2>shop products</h2>
             <button class="btn btn-primary" onclick="addNewItem('shop')">
-              <i class="ri-add-line"></i> add item
+              <i class="ri-add-line"></i> Add Product
             </button>
           </div>
 
+          <!-- Add Product Form -->
           <div class="form-group">
             <label>add new product</label>
             <form class="admin-form" id="shopForm" onsubmit="handleSubmit(event, 'shop')">
               <div class="form-row">
                 <input type="text" name="productName" placeholder="Product Name" class="form-input" required>
                 <input type="number" name="price" placeholder="Price" class="form-input" required>
-                <input type="number" name="stock" placeholder="Stock Quantity" class="form-input" value="0" min="0" required>
               </div>
               <div class="form-row">
                 <select name="category" class="form-input">
@@ -277,6 +241,37 @@
                 <input type="text" name="tags" placeholder="Tags (comma-separated)" class="form-input">
               </div>
               <textarea name="description" placeholder="Product Description" class="form-textarea" required></textarea>
+
+              <!-- Stock Per Size -->
+              <div id="stockBySizeForm" style="margin: 24px 0; padding: 20px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 4px;">
+                <label style="display: block; margin-bottom: 16px; font-size: 13px; font-weight: 600; text-transform: lowercase; letter-spacing: 0.05em; color: #fff;">stock by size</label>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); gap: 12px; width: 100%;">
+                  <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <label style="margin: 0; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: rgba(255, 255, 255, 0.7); text-align: center;">XS</label>
+                    <input type="number" name="stockXS" placeholder="0" value="0" min="0" style="width: 100%; padding: 8px 6px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.15); color: #fff; border-radius: 4px; box-sizing: border-box; font-size: 14px; font-weight: 500; font-family: Poppins, sans-serif; text-align: center;">
+                  </div>
+                  <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <label style="margin: 0; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: rgba(255, 255, 255, 0.7); text-align: center;">S</label>
+                    <input type="number" name="stockS" placeholder="0" value="0" min="0" style="width: 100%; padding: 8px 6px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.15); color: #fff; border-radius: 4px; box-sizing: border-box; font-size: 14px; font-weight: 500; font-family: Poppins, sans-serif; text-align: center;">
+                  </div>
+                  <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <label style="margin: 0; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: rgba(255, 255, 255, 0.7); text-align: center;">M</label>
+                    <input type="number" name="stockM" placeholder="0" value="0" min="0" style="width: 100%; padding: 8px 6px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.15); color: #fff; border-radius: 4px; box-sizing: border-box; font-size: 14px; font-weight: 500; font-family: Poppins, sans-serif; text-align: center;">
+                  </div>
+                  <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <label style="margin: 0; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: rgba(255, 255, 255, 0.7); text-align: center;">L</label>
+                    <input type="number" name="stockL" placeholder="0" value="0" min="0" style="width: 100%; padding: 8px 6px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.15); color: #fff; border-radius: 4px; box-sizing: border-box; font-size: 14px; font-weight: 500; font-family: Poppins, sans-serif; text-align: center;">
+                  </div>
+                  <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <label style="margin: 0; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: rgba(255, 255, 255, 0.7); text-align: center;">XL</label>
+                    <input type="number" name="stockXL" placeholder="0" value="0" min="0" style="width: 100%; padding: 8px 6px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.15); color: #fff; border-radius: 4px; box-sizing: border-box; font-size: 14px; font-weight: 500; font-family: Poppins, sans-serif; text-align: center;">
+                  </div>
+                  <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <label style="margin: 0; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: rgba(255, 255, 255, 0.7); text-align: center;">XXL</label>
+                    <input type="number" name="stockXXL" placeholder="0" value="0" min="0" style="width: 100%; padding: 8px 6px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.15); color: #fff; border-radius: 4px; box-sizing: border-box; font-size: 14px; font-weight: 500; font-family: Poppins, sans-serif; text-align: center;">
+                  </div>
+                </div>
+              </div>
               
               <div class="file-input-wrapper">
                 <label>product images (multiple)</label>
@@ -288,53 +283,60 @@
             </form>
           </div>
 
-          <div class="filter-bar">
-            <div class="filter-group">
-              <i class="ri-search-line"></i>
-              <input type="text" id="shopSearch" placeholder="search products..." class="filter-input" onkeyup="filterShopItems()">
+          <!-- Shop Filter & Control Bar -->
+          <div class="shop-control-bar">
+            <div class="shop-controls">
+              <div class="filter-group">
+                <label for="shopSearch">Search</label>
+                <div class="search-input">
+                  <i class="ri-search-line"></i>
+                  <input type="text" id="shopSearch" placeholder="Find products..." onkeyup="filterShopItems()">
+                </div>
+              </div>
+
+              <div class="filter-group">
+                <label for="shopCategory">Category</label>
+                <select id="shopCategory" onchange="filterShopItems()">
+                  <option value="">All Categories</option>
+                  <option value="uncategorized">Uncategorized</option>
+                </select>
+              </div>
+
+              <div class="filter-group">
+                <label for="shopSortBy">Sort By</label>
+                <select id="shopSortBy" onchange="filterShopItems()">
+                  <option value="date-desc">Newest First</option>
+                  <option value="date-asc">Oldest First</option>
+                  <option value="name-asc">Name (A-Z)</option>
+                  <option value="name-desc">Name (Z-A)</option>
+                  <option value="price-asc">Price (Low to High)</option>
+                  <option value="price-desc">Price (High to Low)</option>
+                </select>
+              </div>
+
+              <button class="btn btn-secondary" onclick="resetShopFilters()">
+                <i class="ri-refresh-line"></i> Reset
+              </button>
             </div>
 
-            <div class="filter-group">
-              <label>category</label>
-              <select id="shopCategory" class="filter-select" onchange="filterShopItems()">
-                <option value="">all categories</option>
-                <option value="uncategorized">uncategorized</option>
-              </select>
+            <!-- Bulk Actions Bar -->
+            <div class="bulk-actions-bar" id="bulkActionsBar" style="display: none;">
+              <div class="bulk-info">
+                <span id="bulkSelectedCount">0</span> items selected
+              </div>
+              <div class="bulk-buttons">
+                <button class="btn btn-secondary" onclick="bulkSelectAll()">Select All</button>
+                <button class="btn btn-secondary" onclick="bulkClearSelection()">Clear</button>
+                <button class="btn btn-warning" onclick="bulkArchiveItems()">Archive</button>
+                <button class="btn btn-danger" onclick="bulkDeleteItems()">Delete</button>
+              </div>
             </div>
-
-            <div class="filter-group">
-              <label>sort by</label>
-              <select id="shopSortBy" class="filter-select" onchange="filterShopItems()">
-                <option value="date-desc">newest first</option>
-                <option value="date-asc">oldest first</option>
-                <option value="name-asc">name (a-z)</option>
-                <option value="name-desc">name (z-a)</option>
-                <option value="price-asc">price (low to high)</option>
-                <option value="price-desc">price (high to low)</option>
-              </select>
-            </div>
-
-            <button class="btn btn-secondary" onclick="resetShopFilters()">reset filters</button>
           </div>
 
-          <!-- Bulk Actions Bar -->
-          <div class="bulk-actions-bar" id="bulkActionsBar" style="display: none;">
-            <div class="bulk-info">
-              <span id="bulkSelectedCount">0</span> items selected
-            </div>
-            <div class="bulk-buttons">
-              <button class="btn btn-secondary" onclick="bulkSelectAll()">select all</button>
-              <button class="btn btn-secondary" onclick="bulkClearSelection()">clear</button>
-              <button class="btn btn-warning" onclick="bulkArchiveItems()">archive selected</button>
-              <button class="btn btn-danger" onclick="bulkDeleteItems()">delete selected</button>
-            </div>
-          </div>
-
-          <div class="items-list">
-            <h3>current products</h3>
-            <div id="shopItems" class="items-grid">
-              <!-- Items akan dimuat dari data -->
-              <p class="empty-state">no items yet. add your first product!</p>
+          <!-- Shop Products Grid -->
+          <div class="shop-container">
+            <div id="shopItems" class="shop-grid">
+              <p class="empty-state">No products yet. Add your first product!</p>
             </div>
           </div>
         </section>
@@ -382,27 +384,122 @@
             </div>
           </div>
         </section>
+
+        <!-- ORDERS Section -->
+        <section id="orders" class="admin-section">
+          <div class="section-header">
+            <h2>orders management</h2>
+          </div>
+
+          <!-- Order Stats -->
+          <div class="inventory-stats">
+            <div class="stat-box">
+              <div class="stat-label">total orders</div>
+              <div class="stat-number" id="totalOrders">0</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">pending</div>
+              <div class="stat-number warning" id="pendingOrders">0</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">completed</div>
+              <div class="stat-number" id="completedOrders">0</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">total revenue</div>
+              <div class="stat-number" id="totalRevenue">$0</div>
+            </div>
+          </div>
+
+          <!-- Order Filters -->
+          <div class="filter-bar">
+            <div class="filter-group">
+              <label>status</label>
+              <select id="orderStatus" class="filter-select" onchange="filterOrders()">
+                <option value="">all status</option>
+                <option value="pending">pending</option>
+                <option value="processing">processing</option>
+                <option value="completed">completed</option>
+                <option value="cancelled">cancelled</option>
+              </select>
+            </div>
+            <button class="btn btn-secondary" onclick="resetOrderFilters()">reset</button>
+          </div>
+
+          <!-- Orders Table -->
+          <div class="items-list">
+            <h3>order history</h3>
+            <div id="ordersTable" class="inventory-table">
+              <p class="empty-state">no orders yet</p>
+            </div>
+          </div>
+        </section>
       </div>
     </main>
   </div>
 
   <!-- Modal for Edit/Delete -->
-  <div id="itemModal" class="modal">
-    <div class="modal-content">
-      <button class="modal-close" onclick="closeModal()">&times;</button>
-      <h3 id="modalTitle">edit item</h3>
-      <form id="modalForm" onsubmit="handleModalSubmit(event)">
-        <div id="modalFormContent">
-          <!-- Form content akan diisi dinamis -->
+  <div id="itemModal" class="modal edit-modal">
+    <div class="modal-content edit-modal-content">
+      <div class="modal-header">
+        <h3 id="modalTitle">Edit Item</h3>
+        <button type="button" class="modal-close" onclick="closeModal()">
+          <i class="ri-close-line"></i>
+        </button>
+      </div>
+
+      <form id="modalForm" onsubmit="handleModalSubmit(event)" class="modal-form">
+        <div class="modal-body">
+          <div id="modalFormContent">
+            <!-- Form content akan diisi dinamis -->
+          </div>
         </div>
-        <div class="modal-buttons">
-          <button type="button" class="btn btn-secondary" onclick="closeModal()">cancel</button>
-          <button type="submit" class="btn btn-success">save changes</button>
-          <button type="button" class="btn btn-danger" onclick="deleteItem()">delete</button>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal()">
+            <i class="ri-close-line"></i> Cancel
+          </button>
+          <button type="button" class="btn btn-danger" onclick="deleteItem()">
+            <i class="ri-delete-bin-line"></i> Delete
+          </button>
+          <button type="submit" class="btn btn-success">
+            <i class="ri-check-line"></i> Save
+          </button>
         </div>
       </form>
     </div>
   </div>
+
+  <!-- Modal for Order Details -->
+  <div id="orderModal" class="modal edit-modal">
+    <div class="modal-content edit-modal-content">
+      <div class="modal-header">
+        <h3 id="orderModalTitle">Order Details</h3>
+        <button type="button" class="modal-close" onclick="closeOrderModal()">
+          <i class="ri-close-line"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div id="orderModalContent">
+          <!-- Order details akan diisi dinamis -->
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeOrderModal()">
+          <i class="ri-close-line"></i> Close
+        </button>
+        <button type="button" class="btn btn-primary" onclick="printInvoice()">
+          <i class="ri-printer-line"></i> Print
+        </button>
+        <button type="button" class="btn btn-success" onclick="updateOrderStatus()">
+          <i class="ri-check-line"></i> Update
+        </button>
+      </div>
+    </div>
+  </div>
+
 
   <!-- Firebase Scripts - Using Compat version (supports traditional script loading) -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -413,5 +510,9 @@
   <!-- Admin Scripts -->
   <script src="admin.js"></script>
   <script src="firebase-admin-sync.js"></script>
+  
+  <!-- Payment, Email & Customer Account Scripts (Production) -->
+  <script src="payment-integration.js"></script>
+  <script src="email-notifications.js"></script>
 </body>
 </html>

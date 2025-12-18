@@ -1,0 +1,174 @@
+{
+  "rules": {
+    // 🔒 SECURITY RULES untuk Firebase Realtime Database
+
+    // ============================================
+    // 1. USERS DATA
+    // ============================================
+    "users": {
+      "$uid": {
+        // Only authenticated users can read their own data
+        ".read": "auth.uid === $uid",
+        
+        // Only the user can write to their own data
+        ".write": "auth.uid === $uid",
+        
+        // Validate data structure
+        ".validate": "newData.hasChildren(['email'])",
+        
+        "profile": {
+          ".read": "auth.uid === $parent.parent.key || root.child('public').child($parent.parent.key).exists()",
+          ".write": "auth.uid === $parent.parent.key",
+          ".validate": "newData.hasChildren(['name', 'avatar'])"
+        },
+        
+        "settings": {
+          ".read": "auth.uid === $parent.parent.key",
+          ".write": "auth.uid === $parent.parent.key",
+          "privacy": {
+            ".validate": "newData.val() === 'public' || newData.val() === 'private'"
+          }
+        },
+        
+        "posts": {
+          "$postId": {
+            ".read": "auth.uid === $parent.parent.key",
+            ".write": "auth.uid === $parent.parent.key",
+            ".validate": "newData.hasChildren(['title', 'content', 'timestamp'])"
+          }
+        }
+      },
+      
+      // Prevent direct access to all users
+      ".read": false,
+      ".write": false
+    },
+
+    // ============================================
+    // 2. PUBLIC DATA
+    // ============================================
+    "public": {
+      // Anyone can read public data
+      ".read": true,
+      
+      // Only authenticated users can write
+      ".write": "auth != null && root.child('admins').child(auth.uid).exists()",
+      
+      "posts": {
+        "$postId": {
+          ".validate": "newData.hasChildren(['title', 'content', 'author', 'timestamp']) && newData.child('title').val().length > 0"
+        }
+      },
+      
+      "comments": {
+        "$commentId": {
+          ".read": true,
+          ".write": "auth != null && (newData.child('author').val() === auth.uid || root.child('admins').child(auth.uid).exists())"
+        }
+      }
+    },
+
+    // ============================================
+    // 3. ADMIN DATA
+    // ============================================
+    "admins": {
+      // Only admins can read admin list
+      ".read": "root.child('admins').child(auth.uid).exists()",
+      
+      // Only allow self-reference (can't add yourself as admin)
+      ".write": false,
+      
+      "$uid": {
+        ".validate": "newData.isBoolean()"
+      }
+    },
+
+    // ============================================
+    // 4. PRODUCT DATA (untuk shop)
+    // ============================================
+    "products": {
+      // Everyone can read products
+      ".read": true,
+      
+      // Only admins can write
+      ".write": "root.child('admins').child(auth.uid).exists()",
+      
+      "$productId": {
+        ".validate": "newData.hasChildren(['name', 'price', 'description', 'stock']) && newData.child('price').val() > 0"
+      }
+    },
+
+    // ============================================
+    // 5. ORDERS DATA
+    // ============================================
+    "orders": {
+      $orderId: {
+        // Users can read their own orders
+        ".read": "auth.uid === data.child('userId').val() || root.child('admins').child(auth.uid).exists()",
+        
+        // Users can create and update their own orders
+        ".write": "auth.uid === data.child('userId').val() || root.child('admins').child(auth.uid).exists()",
+        
+        ".validate": "newData.hasChildren(['userId', 'items', 'totalPrice', 'status', 'timestamp']) && newData.child('totalPrice').val() >= 0"
+      }
+    },
+
+    // ============================================
+    // 6. FEEDBACK/COMMENTS
+    // ============================================
+    "feedback": {
+      ".read": "root.child('admins').child(auth.uid).exists() || data.child('public').val() === true",
+      
+      "$feedbackId": {
+        ".write": "!data.exists() && auth != null",
+        ".validate": "newData.hasChildren(['email', 'message', 'timestamp']) && newData.child('message').val().length > 0 && newData.child('message').val().length < 5000"
+      }
+    },
+
+    // ============================================
+    // 7. SESSIONS (untuk track active users)
+    // ============================================
+    "sessions": {
+      $uid: {
+        ".write": "auth.uid === $uid",
+        ".read": "auth.uid === $uid || root.child('admins').child(auth.uid).exists()",
+        ".validate": "newData.hasChildren(['lastActive', 'platform'])"
+      }
+    },
+
+    // ============================================
+    // 8. AUDIT LOG (untuk security)
+    // ============================================
+    "auditLogs": {
+      ".read": "root.child('admins').child(auth.uid).exists()",
+      ".write": "root.child('admins').child(auth.uid).exists()",
+      
+      $logId: {
+        ".validate": "newData.hasChildren(['action', 'userId', 'timestamp', 'details'])"
+      }
+    },
+
+    // ============================================
+    // 9. BANNED USERS (blocklist)
+    // ============================================
+    "bannedUsers": {
+      ".read": "root.child('admins').child(auth.uid).exists()",
+      ".write": "root.child('admins').child(auth.uid).exists()",
+      
+      $uid: {
+        ".validate": "newData.isBoolean()"
+      }
+    },
+
+    // ============================================
+    // 10. RATE LIMITING (client-side hints)
+    // ============================================
+    "rateLimits": {
+      $uid: {
+        ".read": "auth.uid === $uid",
+        ".write": "auth.uid === $uid",
+        ".validate": "newData.hasChildren(['lastRequest', 'requestCount'])"
+      }
+    }
+  }
+}

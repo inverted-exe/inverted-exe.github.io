@@ -28,19 +28,21 @@ function displayShopItems() {
 
   // Render with lazy loading
   shopContainer.innerHTML = adminData.shop.map((item, idx) => `
-    <a href="/shop/product-detail.html?id=${item.id}" class="shop-item-simple" data-item="${idx}">
-      <div class="shop-image-simple">
-        ${item.image ? `
-          <img 
-            ${idx < 12 ? `src="${item.image}"` : `data-src="${item.image}"`}
-            alt="${item.name}" 
-            loading="lazy"
-            class="shop-item-img"
-          >
-        ` : '<div style="background: rgba(255,255,255,0.1); height: 100%; display:flex; align-items:center; justify-content:center;">No Image</div>'}
-      </div>
-      <h3 class="shop-item-title">${item.name}</h3>
-    </a>
+    <div class="shop-item-simple" data-item="${idx}" data-product-id="${item.id}">
+      <a href="/shop/product-detail.html?id=${item.id}" class="shop-item-link">
+        <div class="shop-image-simple">
+          ${item.image ? `
+            <img 
+              ${idx < 12 ? `src="${item.image}"` : `data-src="${item.image}"`}
+              alt="${item.name}" 
+              loading="lazy"
+              class="shop-item-img"
+            >
+          ` : '<div style="background: rgba(255,255,255,0.1); height: 100%; display:flex; align-items:center; justify-content:center;">No Image</div>'}
+        </div>
+        <h3 class="shop-item-title">${item.name}</h3>
+      </a>
+    </div>
   `).join('');
 
   // Setup lazy loading for images

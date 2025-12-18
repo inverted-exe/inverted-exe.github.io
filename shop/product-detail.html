@@ -84,12 +84,35 @@
               <p id="detailProductDescription"></p>
             </div>
 
+            <div class="detail-options">
+              <!-- Size Selector -->
+              <div class="option-group">
+                <label for="sizeSelect" class="option-label">size:</label>
+                <select id="sizeSelect" class="option-select">
+                  <option value="">select size</option>
+                  <option value="XS">XS</option>
+                  <option value="S">S</option>
+                  <option value="M">M</option>
+                  <option value="L">L</option>
+                  <option value="XL">XL</option>
+                  <option value="XXL">XXL</option>
+                </select>
+              </div>
+
+              <!-- Quantity Selector -->
+              <div class="option-group">
+                <label for="quantityInput" class="option-label">quantity:</label>
+                <div class="quantity-selector">
+                  <button class="qty-btn" onclick="decreaseQuantity()">−</button>
+                  <input type="number" id="quantityInput" class="qty-input" value="1" min="1" max="99">
+                  <button class="qty-btn" onclick="increaseQuantity()">+</button>
+                </div>
+              </div>
+            </div>
+
             <div class="detail-actions">
-              <button class="action-btn add-to-cart">
+              <button class="action-btn add-to-cart" onclick="addProductToCart()">
                 <i class="ri-shopping-cart-2-line"></i> add to cart
-              </button>
-              <button class="action-btn add-to-wishlist">
-                <i class="ri-heart-line"></i> wishlist
               </button>
             </div>
 
