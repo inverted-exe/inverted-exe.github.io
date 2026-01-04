@@ -15,7 +15,6 @@
 
   <link rel="stylesheet" href="../styles.css">
   <script src="../translations.js"></script>
-  <script src="../admin/data-loader.js"></script>
   <script src="../performance.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -40,12 +39,7 @@
       <a href="/"><img src="../image/brand.png" alt="inverted.exe" /></a>
     </div>
 
-    <div class="nav-right">
-      <a href="../checkout.html" class="nav-action cart-btn" title="Shopping Cart">
-        <i class="ri-shopping-cart-line"></i>
-        <span class="cart-count" id="cartCount"></span>
-      </a>
-    </div>
+    <div class="nav-right"></div>
   </header>
 
   <main>
@@ -57,7 +51,7 @@
       </div>
       
       <div class="shop-grid">
-        <!-- Shop items loaded from admin panel -->
+        <!-- Shop items loaded dynamically -->
       </div>
         
 
@@ -70,7 +64,6 @@
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       displayShopItems();
-      updateCartCount();
     });
   </script>
 </body>

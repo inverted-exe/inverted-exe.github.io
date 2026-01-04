@@ -47,7 +47,7 @@
       <div class="detail-container">
         <!-- Back Button -->
         <a href="/shop" class="back-link">
-          <i class="ri-arrow-left-line"></i> back to shop
+          <i class="ri-arrow-left-line"></i> back
         </a>
 
         <div class="detail-content">
@@ -67,57 +67,38 @@
             </div>
           </div>
 
-          <!-- Product Info -->
+          <!-- Product Info - Compact Layout -->
           <div class="detail-info">
+            <!-- Header Section -->
             <div class="detail-header">
               <h1 id="detailProductName"></h1>
-              <p id="detailProductCategory" class="product-category"></p>
+              <div class="detail-meta-top">
+                <span class="meta-category" id="detailProductCategory"></span>
+                <span class="meta-date" id="detailCreatedAt"></span>
+              </div>
             </div>
 
-            <div class="detail-price">
-              <span class="price-label">price:</span>
+            <!-- Price Section -->
+            <div class="detail-price-section">
               <span id="detailProductPrice" class="price-value"></span>
             </div>
 
+            <!-- Description -->
             <div class="detail-description">
-              <h3>description</h3>
               <p id="detailProductDescription"></p>
             </div>
 
-            <div class="detail-options">
-              <!-- Size Selector -->
-              <div class="option-group">
-                <label for="sizeSelect" class="option-label">size:</label>
-                <select id="sizeSelect" class="option-select">
-                  <option value="">select size</option>
-                  <option value="XS">XS</option>
-                  <option value="S">S</option>
-                  <option value="M">M</option>
-                  <option value="L">L</option>
-                  <option value="XL">XL</option>
-                  <option value="XXL">XXL</option>
-                </select>
-              </div>
-
-              <!-- Quantity Selector -->
-              <div class="option-group">
-                <label for="quantityInput" class="option-label">quantity:</label>
-                <div class="quantity-selector">
-                  <button class="qty-btn" onclick="decreaseQuantity()">−</button>
-                  <input type="number" id="quantityInput" class="qty-input" value="1" min="1" max="99">
-                  <button class="qty-btn" onclick="increaseQuantity()">+</button>
-                </div>
-              </div>
+            <!-- Available Sizes (Pills) -->
+            <div class="detail-sizes" id="detailSizes" style="display:none;">
+              <div class="sizes-label">available sizes:</div>
+              <div class="sizes-pills" id="sizesPillsContainer"></div>
             </div>
 
+            <!-- Action Button -->
             <div class="detail-actions">
-              <button class="action-btn add-to-cart" onclick="addProductToCart()">
-                <i class="ri-shopping-cart-2-line"></i> add to cart
+              <button class="action-btn buy-on-teepublic" id="detailActionBtn">
+                <i class="ri-external-link-line"></i> buy on teepublic
               </button>
-            </div>
-
-            <div class="detail-meta">
-              <p class="meta-info" id="detailCreatedAt"></p>
             </div>
           </div>
         </div>
