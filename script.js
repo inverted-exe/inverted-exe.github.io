@@ -77,6 +77,30 @@ document.addEventListener('DOMContentLoaded', ()=> {
     });
   });
 
+  // Set active nav link based on current page
+  function setActiveNavLink() {
+    const currentPath = window.location.pathname;
+    document.querySelectorAll('.nav-link').forEach(link => {
+      link.classList.remove('active');
+      const href = link.getAttribute('href');
+      if (href && currentPath.startsWith(href)) {
+        link.classList.add('active');
+      }
+    });
+    
+    // Also set active for mobile links
+    document.querySelectorAll('.mobile-link').forEach(link => {
+      link.classList.remove('active');
+      const href = link.getAttribute('href');
+      if (href && currentPath.startsWith(href)) {
+        link.classList.add('active');
+      }
+    });
+  }
+  
+  setActiveNavLink();
+  window.addEventListener('popstate', setActiveNavLink);
+
   // Close mobile nav on outside click
   document.addEventListener('click', (e) => {
     if (!e.target.closest('.mobile-nav-overlay') && !e.target.closest('.burger')) {
@@ -459,15 +483,14 @@ function setupImageLightbox() {
       <div class="gallery-modal-content">
         <button class="gallery-modal-close" onclick="closeGalleryModal()">&times;</button>
         
-        <div class="gallery-modal-main">
+        <div class="gallery-modal-main" id="galleryModalMain">
           <button class="gallery-modal-nav prev-nav" onclick="previousGalleryImage()">
             <i class="ri-arrow-left-s-line"></i>
           </button>
           
-          <div class="gallery-modal-image-container">
-            <img id="galleryModalImage" src="" alt="">
-            <div class="gallery-modal-counter">
-              <span id="galleryCurrentIndex">1</span> / <span id="galleryTotalCount">1</span>
+          <div class="gallery-modal-image-wrapper">
+            <div class="gallery-modal-image-container">
+              <img id="galleryModalImage" src="" alt="">
             </div>
           </div>
           
@@ -494,8 +517,6 @@ function openGalleryModal(index) {
   
   // Set main image
   document.getElementById('galleryModalImage').src = item.image;
-  document.getElementById('galleryCurrentIndex').textContent = index + 1;
-  document.getElementById('galleryTotalCount').textContent = window.galleryData.length;
   
   modal.classList.add('active');
   document.body.style.overflow = 'hidden';
@@ -535,6 +556,39 @@ document.addEventListener('click', (e) => {
   }
 });
 
+// Swipe gesture for gallery modal
+let touchStartX = 0;
+let touchEndX = 0;
+let touchStartTime = 0;
+
+document.addEventListener('touchstart', (e) => {
+  const modal = document.getElementById('galleryModal');
+  if (modal && modal.classList.contains('active')) {
+    touchStartX = e.changedTouches[0].screenX;
+    touchStartTime = Date.now();
+  }
+}, false);
+
+document.addEventListener('touchend', (e) => {
+  const modal = document.getElementById('galleryModal');
+  if (modal && modal.classList.contains('active')) {
+    touchEndX = e.changedTouches[0].screenX;
+    const touchDuration = Date.now() - touchStartTime;
+    const swipeDistance = Math.abs(touchEndX - touchStartX);
+    
+    // Swipe threshold: at least 50px and within 500ms
+    if (swipeDistance > 50 && touchDuration < 500) {
+      if (touchEndX < touchStartX) {
+        // Swiped left, go to next image
+        nextGalleryImage();
+      } else if (touchEndX > touchStartX) {
+        // Swiped right, go to previous image
+        previousGalleryImage();
+      }
+    }
+  }
+}, false);
+
 // Keyboard navigation for gallery
 document.addEventListener('keydown', (e) => {
   const modal = document.getElementById('galleryModal');
@@ -553,6 +607,33 @@ document.addEventListener('keydown', (e) => {
     closeImageLightbox();
   }
 });
+
+// Download Gallery Image Function
+function downloadGalleryImage(imageUrl, imageName) {
+  if (!imageUrl) {
+    console.error('No image URL provided');
+    return;
+  }
+
+  // Create a clean filename
+  let filename = imageName.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'gallery-image';
+  if (!filename.endsWith('.jpg') && !filename.endsWith('.png')) {
+    filename += '.jpg';
+  }
+
+  // Create a temporary anchor element
+  const link = document.createElement('a');
+  link.href = imageUrl;
+  link.download = filename;
+  link.style.display = 'none';
+
+  // Append to body and click
+  document.body.appendChild(link);
+  link.click();
+
+  // Clean up
+  document.body.removeChild(link);
+}
 
 // Wait for DOM to be ready
 if (document.readyState === 'loading') {

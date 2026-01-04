@@ -90,7 +90,6 @@ function setupEventListeners() {
 
   // Add buttons
   document.getElementById('addShopBtn').addEventListener('click', () => openItemModal('shop'));
-  document.getElementById('addArchiveBtn').addEventListener('click', () => openItemModal('archive'));
   document.getElementById('addGalleryBtn').addEventListener('click', () => openItemModal('gallery'));
 
   // Modal controls
@@ -235,6 +234,7 @@ function renderShopItems() {
       </div>
       <div class="admin-item-actions">
         <button class="btn-edit" onclick="editShopItem(${idx})">edit</button>
+        <button class="btn-archive" onclick="archiveShopItem(${idx})">archive</button>
         <button class="btn-delete" onclick="deleteShopItem(${idx})">delete</button>
       </div>
     </div>
@@ -258,17 +258,17 @@ function renderArchiveItems() {
   grid.innerHTML = adminData.archive.map((item, idx) => `
     <div class="admin-item-card">
       <div class="admin-item-image ${!item.image ? 'empty' : ''}">
-        ${item.image ? `<img src="${item.image}" alt="${item.title}">` : '<i class="ri-image-add-line"></i>'}
+        ${item.image ? `<img src="${item.image}" alt="${item.name}">` : '<i class="ri-image-add-line"></i>'}
       </div>
       <div class="admin-item-info">
-        <h4 class="admin-item-title">${item.title || 'untitled'}</h4>
+        <h4 class="admin-item-title">${item.name || 'untitled'}</h4>
         <div class="admin-item-meta">
-          <span>${item.category || 'uncategorized'}</span>
-          <span>📅 ${item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'unknown'}</span>
+          <span>💰 $${item.price || '0'}</span>
+          <span>📅 ${item.archivedAt ? new Date(item.archivedAt).toLocaleDateString() : 'unknown'}</span>
         </div>
       </div>
       <div class="admin-item-actions">
-        <button class="btn-edit" onclick="editArchiveItem(${idx})">edit</button>
+        <button class="btn-unarchive" onclick="unarchiveArchiveItem(${idx})">unarchive</button>
         <button class="btn-delete" onclick="deleteArchiveItem(${idx})">delete</button>
       </div>
     </div>
@@ -341,8 +341,30 @@ function openItemModal(type, itemIndex = null) {
         <input type="number" id="shopPrice" placeholder="0.00" value="${item?.price || ''}" step="0.01">
       </div>
       <div class="form-group">
-        <label for="shopImage">image url</label>
-        <input type="url" id="shopImage" placeholder="https://example.com/image.jpg" value="${item?.image || ''}">
+        <label>product images</label>
+        <div class="image-upload-group">
+          <div class="images-preview-container" id="shopImagesPreview">
+            ${item?.images && item.images.length > 0 ? item.images.map((img, i) => `
+              <div class="image-preview-item">
+                <img src="${img}" alt="preview ${i + 1}">
+                <button type="button" class="btn-remove-image" onclick="removeImageFromPreview('shop', ${i})">×</button>
+              </div>
+            `).join('') : '<div class="empty-preview"><i class="ri-image-add-line"></i><p>no images selected</p></div>'}
+          </div>
+          <div class="upload-options">
+            <div class="form-group">
+              <label for="shopImageFile">choose files (multiple)</label>
+              <input type="file" id="shopImageFile" accept="image/*" multiple onchange="handleMultipleImageUpload(event, 'shop')">
+              <small>you can select multiple images at once</small>
+            </div>
+            <div class="divider">or</div>
+            <div class="form-group">
+              <label for="shopImageUrl">image url</label>
+              <input type="url" id="shopImageUrl" placeholder="https://example.com/image.jpg" value="${item?.images && item.images.length === 1 && !item.images[0].startsWith('data:') ? item.images[0] : ''}">
+              <small>add single image via URL</small>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="form-group">
         <label for="shopDescription">description</label>
@@ -352,6 +374,10 @@ function openItemModal(type, itemIndex = null) {
         <label for="shopTeepublic">teepublic link</label>
         <input type="url" id="shopTeepublic" placeholder="https://teepublic.com/..." value="${item?.teepublicLink || ''}">
       </div>
+      <div class="form-group">
+        <label for="shopDesignBy">design by</label>
+        <input type="text" id="shopDesignBy" placeholder="e.g., designer name" value="${item?.designBy || ''}">
+      </div>
       <div class="form-actions">
         <button type="button" class="btn-cancel" onclick="closeItemModal()">cancel</button>
         <button type="button" class="btn-save" onclick="saveShopItem()">save product</button>
@@ -360,24 +386,34 @@ function openItemModal(type, itemIndex = null) {
   } else if (type === 'archive') {
     formHTML = `
       <div class="form-group">
+        <label>⚠️ this item is archived and cannot be edited</label>
+        <p class="archive-notice">unarchive this item to make changes to it</p>
+      </div>
+      <div class="form-group">
         <label for="archiveTitle">title</label>
-        <input type="text" id="archiveTitle" placeholder="archive item title" value="${item?.title || ''}">
+        <input type="text" id="archiveTitle" placeholder="archive item title" value="${item?.name || ''}" readonly>
       </div>
       <div class="form-group">
-        <label for="archiveCategory">category</label>
-        <input type="text" id="archiveCategory" placeholder="e.g., photography, illustration" value="${item?.category || ''}">
+        <label for="archivePrice">price ($)</label>
+        <input type="text" id="archivePrice" value="$${item?.price || '0'}" readonly>
       </div>
       <div class="form-group">
-        <label for="archiveImage">image url</label>
-        <input type="url" id="archiveImage" placeholder="https://example.com/image.jpg" value="${item?.image || ''}">
+        <label>product image</label>
+        <div class="image-upload-group">
+          <div class="image-preview-container">
+            <div class="image-preview" id="archiveImagePreview">
+              ${item?.image ? `<img src="${item.image}" alt="preview">` : '<i class="ri-image-add-line"></i><p>no image</p>'}
+            </div>
+          </div>
+        </div>
       </div>
       <div class="form-group">
         <label for="archiveDescription">description</label>
-        <textarea id="archiveDescription" placeholder="describe this archive item">${item?.description || ''}</textarea>
+        <textarea id="archiveDescription" placeholder="describe this archive item" readonly>${item?.description || ''}</textarea>
       </div>
       <div class="form-actions">
-        <button type="button" class="btn-cancel" onclick="closeItemModal()">cancel</button>
-        <button type="button" class="btn-save" onclick="saveArchiveItem()">save item</button>
+        <button type="button" class="btn-cancel" onclick="closeItemModal()">close</button>
+        <button type="button" class="btn-unarchive" onclick="unarchiveArchiveItem(${itemIndex})" style="flex: 1;">unarchive item</button>
       </div>
     `;
   } else if (type === 'gallery') {
@@ -387,8 +423,25 @@ function openItemModal(type, itemIndex = null) {
         <input type="text" id="galleryTitle" placeholder="gallery item title" value="${item?.title || ''}">
       </div>
       <div class="form-group">
-        <label for="galleryImage">image url</label>
-        <input type="url" id="galleryImage" placeholder="https://example.com/image.jpg" value="${item?.image || ''}">
+        <label>gallery image</label>
+        <div class="image-upload-group">
+          <div class="image-preview-container">
+            <div class="image-preview" id="galleryImagePreview">
+              ${item?.image ? `<img src="${item.image}" alt="preview">` : '<i class="ri-image-add-line"></i><p>no image selected</p>'}
+            </div>
+          </div>
+          <div class="upload-options">
+            <div class="form-group">
+              <label for="galleryImageFile">choose file</label>
+              <input type="file" id="galleryImageFile" accept="image/*" onchange="handleImageUpload(event, 'gallery')">
+            </div>
+            <div class="divider">or</div>
+            <div class="form-group">
+              <label for="galleryImageUrl">image url</label>
+              <input type="url" id="galleryImageUrl" placeholder="https://example.com/image.jpg" value="${item?.image && !item.image.startsWith('data:') ? item.image : ''}">
+            </div>
+          </div>
+        </div>
       </div>
       <div class="form-actions">
         <button type="button" class="btn-cancel" onclick="closeItemModal()">cancel</button>
@@ -399,6 +452,102 @@ function openItemModal(type, itemIndex = null) {
 
   form.innerHTML = formHTML;
   modal.classList.add('active');
+}
+
+// Handle image upload and preview
+function handleImageUpload(event, type) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  // Validate file size (max 5MB)
+  const maxSize = 5 * 1024 * 1024;
+  if (file.size > maxSize) {
+    showNotification('image size must be less than 5MB', 'error');
+    return;
+  }
+
+  // Read file and convert to base64
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const imageData = e.target.result;
+    const previewId = `${type}ImagePreview`;
+    const preview = document.getElementById(previewId);
+    
+    if (preview) {
+      preview.innerHTML = `<img src="${imageData}" alt="preview">`;
+    }
+
+    // Store image data in a hidden input or variable
+    window[`${type}ImageData`] = imageData;
+  };
+  reader.readAsDataURL(file);
+}
+
+// Handle multiple image uploads for shop
+function handleMultipleImageUpload(event, type) {
+  const files = Array.from(event.target.files);
+  if (files.length === 0) return;
+
+  // Initialize array if not exists
+  if (!window[`${type}ImagesData`]) {
+    window[`${type}ImagesData`] = [];
+  }
+
+  let filesProcessed = 0;
+
+  files.forEach((file, index) => {
+    // Validate file size (max 5MB each)
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      showNotification(`image ${index + 1} is too large (max 5MB)`, 'error');
+      return;
+    }
+
+    // Read file and convert to base64
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const imageData = e.target.result;
+      window[`${type}ImagesData`].push(imageData);
+      filesProcessed++;
+
+      // Update preview
+      if (filesProcessed === files.length) {
+        updateImagesPreview(type);
+      }
+    };
+    reader.readAsDataURL(file);
+  });
+
+  showNotification(`${files.length} image(s) added`, 'success');
+}
+
+// Update preview for multiple images
+function updateImagesPreview(type) {
+  const imagesData = window[`${type}ImagesData`] || [];
+  const previewId = `${type}ImagesPreview`;
+  const preview = document.getElementById(previewId);
+
+  if (!preview) return;
+
+  if (imagesData.length === 0) {
+    preview.innerHTML = '<div class="empty-preview"><i class="ri-image-add-line"></i><p>no images selected</p></div>';
+  } else {
+    preview.innerHTML = imagesData.map((img, i) => `
+      <div class="image-preview-item">
+        <img src="${img}" alt="preview ${i + 1}">
+        <button type="button" class="btn-remove-image" onclick="removeImageFromPreview('${type}', ${i})">×</button>
+      </div>
+    `).join('');
+  }
+}
+
+// Remove image from preview
+function removeImageFromPreview(type, index) {
+  const imagesData = window[`${type}ImagesData`];
+  if (imagesData) {
+    imagesData.splice(index, 1);
+    updateImagesPreview(type);
+  }
 }
 
 function closeItemModal() {
@@ -415,12 +564,39 @@ function closeConfirmModal() {
 async function saveShopItem() {
   const name = document.getElementById('shopName').value.trim();
   const price = parseFloat(document.getElementById('shopPrice').value) || 0;
-  const image = document.getElementById('shopImage').value.trim();
+  let images = [];
   const description = document.getElementById('shopDescription').value.trim();
   const teepublicLink = document.getElementById('shopTeepublic').value.trim();
+  const designBy = document.getElementById('shopDesignBy').value.trim();
+
+  // Use uploaded images data if available
+  if (window.shopImagesData && window.shopImagesData.length > 0) {
+    images = window.shopImagesData;
+  } else {
+    // Fallback to single URL image if no files uploaded
+    const imageUrl = document.getElementById('shopImageUrl').value.trim();
+    if (imageUrl) {
+      images = [imageUrl];
+    } else if (currentEditingId !== null) {
+      // When editing, keep existing images if no new images added
+      const existingItem = adminData.shop[currentEditingId];
+      if (existingItem && existingItem.images && existingItem.images.length > 0) {
+        images = existingItem.images;
+      }
+    }
+  }
 
   if (!name) {
     showNotification('please enter product name', 'error');
+    return;
+  }
+
+  if (images.length === 0) {
+    if (currentEditingId === null) {
+      showNotification('please select or enter at least one image for new product', 'error');
+    } else {
+      showNotification('at least one image required', 'error');
+    }
     return;
   }
 
@@ -428,9 +604,12 @@ async function saveShopItem() {
     id: currentEditingId !== null ? adminData.shop[currentEditingId].id : Date.now(),
     name,
     price,
-    image,
+    images, // Store as array
+    image: images[0], // Keep first image as primary for backward compatibility
     description,
     teepublicLink,
+    designBy,
+    createdAt: currentEditingId !== null ? adminData.shop[currentEditingId].createdAt : new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
 
@@ -446,6 +625,9 @@ async function saveShopItem() {
     // Save to Firebase
     await db.ref('content/shop').set(adminData.shop);
     
+    // Clear image data
+    window.shopImagesData = [];
+    
     showNotification('product saved successfully');
     closeItemModal();
     renderShopItems();
@@ -456,50 +638,19 @@ async function saveShopItem() {
 }
 
 async function saveArchiveItem() {
-  const title = document.getElementById('archiveTitle').value.trim();
-  const category = document.getElementById('archiveCategory').value.trim();
-  const image = document.getElementById('archiveImage').value.trim();
-  const description = document.getElementById('archiveDescription').value.trim();
-
-  if (!title) {
-    showNotification('please enter item title', 'error');
-    return;
-  }
-
-  const item = {
-    id: currentEditingId !== null ? adminData.archive[currentEditingId].id : Date.now(),
-    title,
-    category,
-    image,
-    description,
-    createdAt: currentEditingId !== null ? adminData.archive[currentEditingId].createdAt : new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  };
-
-  try {
-    if (currentEditingId !== null) {
-      // Update existing
-      adminData.archive[currentEditingId] = item;
-    } else {
-      // Add new
-      adminData.archive.push(item);
-    }
-
-    // Save to Firebase
-    await db.ref('content/archive').set(adminData.archive);
-    
-    showNotification('archive item saved successfully');
-    closeItemModal();
-    renderArchiveItems();
-  } catch (error) {
-    console.error('Error saving archive item:', error);
-    showNotification('failed to save item', 'error');
-  }
+  // Archive items are read-only, cannot be edited
+  showNotification('archive items cannot be edited', 'info');
+  closeItemModal();
 }
 
 async function saveGalleryItem() {
   const title = document.getElementById('galleryTitle').value.trim();
-  const image = document.getElementById('galleryImage').value.trim();
+  let image = document.getElementById('galleryImageUrl').value.trim();
+
+  // Use uploaded image data if available
+  if (window.galleryImageData) {
+    image = window.galleryImageData;
+  }
 
   if (!title) {
     showNotification('please enter image title', 'error');
@@ -507,7 +658,7 @@ async function saveGalleryItem() {
   }
 
   if (!image) {
-    showNotification('please enter image url', 'error');
+    showNotification('please select or enter an image', 'error');
     return;
   }
 
@@ -530,6 +681,9 @@ async function saveGalleryItem() {
     // Save to Firebase
     await db.ref('content/gallery').set(adminData.gallery);
     
+    // Clear image data
+    window.galleryImageData = null;
+    
     showNotification('gallery image saved successfully');
     closeItemModal();
     renderGalleryItems();
@@ -550,6 +704,49 @@ function editArchiveItem(idx) {
 
 function editGalleryItem(idx) {
   openItemModal('gallery', idx);
+}
+
+// ARCHIVE FUNCTIONS
+function archiveShopItem(idx) {
+  const item = adminData.shop[idx];
+  openConfirmDelete(() => {
+    const archivedItem = {
+      ...item,
+      archivedAt: new Date().toISOString()
+    };
+    
+    // Move to archive
+    adminData.archive.push(archivedItem);
+    adminData.shop.splice(idx, 1);
+    
+    // Save to Firebase
+    db.ref('content/shop').set(adminData.shop);
+    db.ref('content/archive').set(adminData.archive);
+    
+    showNotification('product archived successfully');
+    renderShopItems();
+  }, 'archive');
+}
+
+function unarchiveArchiveItem(idx) {
+  const item = adminData.archive[idx];
+  openConfirmDelete(() => {
+    const unarchivedItem = {
+      ...item,
+      archivedAt: null
+    };
+    
+    // Move back to shop
+    adminData.shop.push(unarchivedItem);
+    adminData.archive.splice(idx, 1);
+    
+    // Save to Firebase
+    db.ref('content/shop').set(adminData.shop);
+    db.ref('content/archive').set(adminData.archive);
+    
+    showNotification('product unarchived successfully');
+    renderArchiveItems();
+  }, 'unarchive');
 }
 
 // DELETE FUNCTIONS
@@ -580,12 +777,35 @@ function deleteGalleryItem(idx) {
   });
 }
 
-function openConfirmDelete(onConfirm) {
+function openConfirmDelete(onConfirm, action = 'delete') {
+  const confirmModal = document.getElementById('confirmModal');
+  const modalTitle = confirmModal.querySelector('h3');
+  const modalText = confirmModal.querySelector('p');
+  const deleteBtn = document.getElementById('confirmDelete');
+  
+  // Update modal text based on action
+  if (action === 'archive') {
+    modalTitle.textContent = 'confirm archive';
+    modalText.textContent = 'are you sure you want to archive this product? you can unarchive it later.';
+    deleteBtn.textContent = 'archive';
+    deleteBtn.className = 'btn-archive';
+  } else if (action === 'unarchive') {
+    modalTitle.textContent = 'confirm unarchive';
+    modalText.textContent = 'are you sure you want to unarchive this product? it will return to the shop.';
+    deleteBtn.textContent = 'unarchive';
+    deleteBtn.className = 'btn-unarchive';
+  } else {
+    modalTitle.textContent = 'confirm delete';
+    modalText.textContent = 'are you sure you want to delete this item? this action cannot be undone.';
+    deleteBtn.textContent = 'delete';
+    deleteBtn.className = 'btn-delete';
+  }
+  
   document.getElementById('confirmDelete').onclick = () => {
     onConfirm();
     closeConfirmModal();
   };
-  document.getElementById('confirmModal').classList.add('active');
+  confirmModal.classList.add('active');
 }
 
 // NOTIFICATIONS

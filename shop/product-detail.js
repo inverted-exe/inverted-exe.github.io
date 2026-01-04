@@ -53,6 +53,17 @@ function displayProductDetail() {
   if (product.createdAt) {
     const date = new Date(product.createdAt).toLocaleDateString();
     document.getElementById('detailCreatedAt').textContent = date;
+  } else if (product.updatedAt) {
+    // Fallback to updatedAt if createdAt doesn't exist
+    const date = new Date(product.updatedAt).toLocaleDateString();
+    document.getElementById('detailCreatedAt').textContent = date;
+  }
+
+  // Set design by
+  if (product.designBy) {
+    const designByElement = document.getElementById('detailDesignBy');
+    designByElement.textContent = `design by ${product.designBy}`;
+    designByElement.style.display = 'block';
   }
 
   // Display available sizes as pills
