@@ -80,7 +80,7 @@ document.addEventListener('DOMContentLoaded', ()=> {
   // Set active nav link based on current page
   function setActiveNavLink() {
     const currentPath = window.location.pathname;
-    document.querySelectorAll('.nav-link').forEach(link => {
+    document.querySelectorAll('.nav-link:not(.profile-link)').forEach(link => {
       link.classList.remove('active');
       const href = link.getAttribute('href');
       if (href && currentPath.startsWith(href)) {

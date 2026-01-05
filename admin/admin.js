@@ -121,9 +121,9 @@ function setupEventListeners() {
   // Populate mobile nav with section links
   if (mobileNav) {
     mobileNav.innerHTML = `
-      <a href="#shop-section" class="mobile-link active" data-section="shop">// shop</a>
-      <a href="#archive-section" class="mobile-link" data-section="archive">// archive</a>
-      <a href="#gallery-section" class="mobile-link" data-section="gallery">// gallery</a>
+      <a href="#shop-section" class="mobile-link active" data-section="shop">shop</a>
+      <a href="#archive-section" class="mobile-link" data-section="archive">.archive</a>
+      <a href="#gallery-section" class="mobile-link" data-section="gallery">gallery</a>
     `;
 
     // Mobile nav link click handlers
