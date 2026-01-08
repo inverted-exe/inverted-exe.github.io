@@ -1,174 +1,107 @@
 {
   "rules": {
-    // 🔒 SECURITY RULES untuk Firebase Realtime Database
+    // 🔒 ENHANCED SECURITY RULES untuk Firebase Realtime Database
+    // Dikombinasikan dengan Cloud Functions validation
 
     // ============================================
-    // 1. USERS DATA
+    // 1. CONTENT DATA (Shop, Archive, Gallery)
     // ============================================
-    "users": {
-      "$uid": {
-        // Only authenticated users can read their own data
-        ".read": "auth.uid === $uid",
-        
-        // Only the user can write to their own data
-        ".write": "auth.uid === $uid",
-        
-        // Validate data structure
-        ".validate": "newData.hasChildren(['email'])",
-        
-        "profile": {
-          ".read": "auth.uid === $parent.parent.key || root.child('public').child($parent.parent.key).exists()",
-          ".write": "auth.uid === $parent.parent.key",
-          ".validate": "newData.hasChildren(['name', 'avatar'])"
-        },
-        
-        "settings": {
-          ".read": "auth.uid === $parent.parent.key",
-          ".write": "auth.uid === $parent.parent.key",
-          "privacy": {
-            ".validate": "newData.val() === 'public' || newData.val() === 'private'"
-          }
-        },
-        
-        "posts": {
-          "$postId": {
-            ".read": "auth.uid === $parent.parent.key",
-            ".write": "auth.uid === $parent.parent.key",
-            ".validate": "newData.hasChildren(['title', 'content', 'timestamp'])"
-          }
-        }
-      },
-      
-      // Prevent direct access to all users
-      ".read": false,
-      ".write": false
-    },
-
-    // ============================================
-    // 2. PUBLIC DATA
-    // ============================================
-    "public": {
-      // Anyone can read public data
+    "content": {
+      // Everyone can read content
       ".read": true,
       
-      // Only authenticated users can write
-      ".write": "auth != null && root.child('admins').child(auth.uid).exists()",
-      
-      "posts": {
-        "$postId": {
-          ".validate": "newData.hasChildren(['title', 'content', 'author', 'timestamp']) && newData.child('title').val().length > 0"
-        }
-      },
-      
-      "comments": {
-        "$commentId": {
-          ".read": true,
-          ".write": "auth != null && (newData.child('author').val() === auth.uid || root.child('admins').child(auth.uid).exists())"
-        }
-      }
-    },
-
-    // ============================================
-    // 3. ADMIN DATA
-    // ============================================
-    "admins": {
-      // Only admins can read admin list
-      ".read": "root.child('admins').child(auth.uid).exists()",
-      
-      // Only allow self-reference (can't add yourself as admin)
+      // Only Cloud Functions (backend) can write
       ".write": false,
       
-      "$uid": {
-        ".validate": "newData.isBoolean()"
+      "shop": {
+        "$productId": {
+          // Validate product structure
+          ".validate": "newData.hasChildren(['name', 'price']) && newData.child('price').val() > 0 && newData.child('price').val() < 1000000"
+        }
+      },
+      
+      "archive": {
+        "$itemId": {
+          ".validate": "newData.hasChildren(['name', 'price'])"
+        }
+      },
+      
+      "gallery": {
+        "$itemId": {
+          ".validate": "newData.hasChildren(['title', 'imageUrl'])"
+        }
       }
     },
 
     // ============================================
-    // 4. PRODUCT DATA (untuk shop)
+    // 2. ADMIN CONFIGURATION
     // ============================================
-    "products": {
-      // Everyone can read products
-      ".read": true,
+    "adminConfig": {
+      // Only admins can read
+      ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
       
-      // Only admins can write
-      ".write": "root.child('admins').child(auth.uid).exists()",
+      // Only Cloud Functions can write
+      ".write": false,
       
-      "$productId": {
-        ".validate": "newData.hasChildren(['name', 'price', 'description', 'stock']) && newData.child('price').val() > 0"
+      "passwordHash": {
+        ".validate": "newData.isString() && newData.val().length > 50"
       }
     },
 
     // ============================================
-    // 5. ORDERS DATA
+    // 3. ADMIN SESSIONS
     // ============================================
-    "orders": {
-      $orderId: {
-        // Users can read their own orders
-        ".read": "auth.uid === data.child('userId').val() || root.child('admins').child(auth.uid).exists()",
+    "adminSessions": {
+      $sessionToken: {
+        // Admin can read their own sessions
+        ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
         
-        // Users can create and update their own orders
-        ".write": "auth.uid === data.child('userId').val() || root.child('admins').child(auth.uid).exists()",
+        // Only Cloud Functions can write
+        ".write": false,
         
-        ".validate": "newData.hasChildren(['userId', 'items', 'totalPrice', 'status', 'timestamp']) && newData.child('totalPrice').val() >= 0"
+        ".validate": "newData.hasChildren(['createdAt', 'ipAddress']) && newData.child('expiresAt').val() > now"
       }
     },
 
     // ============================================
-    // 6. FEEDBACK/COMMENTS
-    // ============================================
-    "feedback": {
-      ".read": "root.child('admins').child(auth.uid).exists() || data.child('public').val() === true",
-      
-      "$feedbackId": {
-        ".write": "!data.exists() && auth != null",
-        ".validate": "newData.hasChildren(['email', 'message', 'timestamp']) && newData.child('message').val().length > 0 && newData.child('message').val().length < 5000"
-      }
-    },
-
-    // ============================================
-    // 7. SESSIONS (untuk track active users)
-    // ============================================
-    "sessions": {
-      $uid: {
-        ".write": "auth.uid === $uid",
-        ".read": "auth.uid === $uid || root.child('admins').child(auth.uid).exists()",
-        ".validate": "newData.hasChildren(['lastActive', 'platform'])"
-      }
-    },
-
-    // ============================================
-    // 8. AUDIT LOG (untuk security)
+    // 4. AUDIT LOGS (immutable)
     // ============================================
     "auditLogs": {
-      ".read": "root.child('admins').child(auth.uid).exists()",
-      ".write": "root.child('admins').child(auth.uid).exists()",
+      // Only admins can read
+      ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
+      
+      // Only Cloud Functions can write (append-only)
+      ".write": false,
       
       $logId: {
-        ".validate": "newData.hasChildren(['action', 'userId', 'timestamp', 'details'])"
+        ".validate": "newData.hasChildren(['action', 'timestamp']) && !data.exists()"
       }
     },
 
     // ============================================
-    // 9. BANNED USERS (blocklist)
+    // 5. FEEDBACK (public submission, protected by rate limit)
     // ============================================
-    "bannedUsers": {
-      ".read": "root.child('admins').child(auth.uid).exists()",
-      ".write": "root.child('admins').child(auth.uid).exists()",
+    "feedback": {
+      // Only admins can read
+      ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
       
-      $uid: {
-        ".validate": "newData.isBoolean()"
+      // Only Cloud Functions can write (rate limited)
+      ".write": false,
+      
+      $feedbackId: {
+        ".validate": "newData.hasChildren(['email', 'message', 'submittedAt']) && newData.child('message').val().length > 10 && newData.child('message').val().length < 5000"
       }
     },
 
     // ============================================
-    // 10. RATE LIMITING (client-side hints)
+    // 6. ADMIN LIST (read-only)
     // ============================================
-    "rateLimits": {
-      $uid: {
-        ".read": "auth.uid === $uid",
-        ".write": "auth.uid === $uid",
-        ".validate": "newData.hasChildren(['lastRequest', 'requestCount'])"
-      }
-    }
+    "admins": {
+      // Only admins can read list
+      ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
+      
+      // No direct writes (managed by admin)
+      ".write": false
+    },
   }
 }
