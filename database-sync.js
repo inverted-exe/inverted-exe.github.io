@@ -68,7 +68,20 @@ const DatabaseSync = {
   // Load data from localStorage (always use this for page views)
   load: () => {
     const data = localStorage.getItem(STORAGE_KEY);
-    return data ? JSON.parse(data) : { shop: [], archive: [], gallery: [] };
+    const parsedData = data ? JSON.parse(data) : { shop: [], archive: [], gallery: [] };
+    
+    // Migrate old data structure - ensure all shop items have teesLink and teepublicLink
+    if (parsedData.shop && Array.isArray(parsedData.shop)) {
+      parsedData.shop = parsedData.shop.map(item => ({
+        ...item,
+        teepublicLink: item.teepublicLink || '',
+        teesLink: item.teesLink || '',
+        createdAt: item.createdAt || new Date().toISOString(),
+        updatedAt: item.updatedAt || new Date().toISOString()
+      }));
+    }
+    
+    return parsedData;
   },
 
   // Save data (to localStorage + remote)

@@ -19,7 +19,6 @@ document.addEventListener('DOMContentLoaded', ()=> {
       <a href="/shop" class="mobile-link" data-i18n="shop">shop</a>
       <a href="/archive" class="mobile-link" data-i18n="archive">.archive</a>
       <a href="/gallery" class="mobile-link" data-i18n="gallery">gallery</a>
-      <a href="/inverted.exe" class="mobile-link" data-i18n="inverted.exe">inverted.exe</a>
     `;
   } else {
     // On other pages, show all menus
@@ -27,7 +26,6 @@ document.addEventListener('DOMContentLoaded', ()=> {
       <a href="/shop" class="mobile-link" data-i18n="shop">shop</a>
       <a href="/archive" class="mobile-link" data-i18n="archive">.archive</a>
       <a href="/gallery" class="mobile-link" data-i18n="gallery">gallery</a>
-      <a href="/inverted.exe" class="mobile-link" data-i18n="inverted.exe">inverted.exe</a>
     `;
   }
   mobileNav.innerHTML = mobileMenuHTML;
@@ -111,9 +109,7 @@ document.addEventListener('DOMContentLoaded', ()=> {
     }
   });
 
-  // Language toggle functionality
-  const langBtns = document.querySelectorAll('.lang-btn');
-  
+  // Reattach mobile listeners
   function reattachMobileListeners() {
     // Re-attach click event listeners to mobile links
     document.querySelectorAll('.mobile-link').forEach(link => {
@@ -128,66 +124,6 @@ document.addEventListener('DOMContentLoaded', ()=> {
       });
     });
   }
-  
-  function translatePage(lang) {
-    // Skip translation if already in this language
-    if (currentLanguage === lang) return;
-    
-    currentLanguage = lang;
-    const elements = document.querySelectorAll('[data-i18n]');
-    elements.forEach(el => {
-      const key = el.dataset.i18n;
-      if (translations && translations[lang] && translations[lang][key]) {
-        // For links and elements with text nodes only
-        if (el.tagName === 'A' || el.tagName === 'BUTTON' || !el.querySelector('*')) {
-          el.textContent = translations[lang][key];
-        } else {
-          // For elements with child elements, only update the direct text
-          el.textContent = translations[lang][key];
-        }
-      }
-    });
-    // Reattach mobile link listeners after translation
-    reattachMobileListeners();
-  }
-  
-  langBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const lang = btn.dataset.lang;
-      
-      // Remove active class from all buttons
-      langBtns.forEach(b => b.classList.remove('active'));
-      
-      // Add active class to clicked button
-      btn.classList.add('active');
-      
-      // Store language preference
-      localStorage.setItem('selectedLanguage', lang);
-      
-      // Translate the page
-      translatePage(lang);
-      
-      // Dispatch custom event for language change
-      document.dispatchEvent(new CustomEvent('languageChanged', { detail: { lang } }));
-    });
-  });
-
-  // Load saved language preference and translate on page load
-  const savedLang = localStorage.getItem('selectedLanguage') || 'en';
-  const savedBtn = document.querySelector(`.lang-btn[data-lang="${savedLang}"]`);
-  
-  // Set active button
-  langBtns.forEach(b => b.classList.remove('active'));
-  if (savedBtn) {
-    savedBtn.classList.add('active');
-  } else {
-    // Find English button as fallback
-    const enBtn = document.querySelector(`.lang-btn[data-lang="en"]`);
-    if (enBtn) enBtn.classList.add('active');
-  }
-  
-  // Always translate on page load to ensure language is applied
-  // Reset currentLanguage to null to force translation
   currentLanguage = null;
   translatePage(savedLang);
 });
@@ -242,6 +178,24 @@ function redirectToTeePublic(event, teepublicLink, productName) {
   // Redirect after short delay
   setTimeout(() => {
     window.open(teepublicLink, '_blank');
+  }, 500);
+}
+
+function redirectToTees(event, teesLink, productName) {
+  if (!teesLink) {
+    alert('Tees.co.id link not available for this product');
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+
+  // Show notification
+  showNotification(`Opening ${productName} on Tees.co.id...`);
+
+  // Redirect after short delay
+  setTimeout(() => {
+    window.open(teesLink, '_blank');
   }, 500);
 }
 

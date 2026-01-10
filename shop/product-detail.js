@@ -35,6 +35,10 @@ function displayProductDetail() {
     return;
   }
 
+  // Ensure all properties exist (for backward compatibility with old data)
+  if (!product.teepublicLink) product.teepublicLink = '';
+  if (!product.teesLink) product.teesLink = '';
+
   // Set up image gallery data
   currentProductData = {
     images: product.images || [product.image],
@@ -84,13 +88,32 @@ function displayProductDetail() {
   }
 
   // Setup TeePublic button
-  const detailActionBtn = document.getElementById('detailActionBtn');
+  const detailTeepublicBtn = document.getElementById('detailTeepublicBtn');
+  const detailTeesBtn = document.getElementById('detailTeesBtn');
+  const actionDivider = document.getElementById('actionDivider');
   
   if (product.teepublicLink) {
-    detailActionBtn.onclick = (e) => redirectToTeePublic(e, product.teepublicLink, product.name);
+    detailTeepublicBtn.onclick = (e) => redirectToTeePublic(e, product.teepublicLink, product.name);
+    detailTeepublicBtn.style.display = 'block';
   } else {
-    // If no TeePublic link, hide the button or show message
-    detailActionBtn.style.display = 'none';
+    detailTeepublicBtn.style.display = 'none';
+  }
+
+  // Setup Tees button
+  if (product.teesLink) {
+    detailTeesBtn.onclick = (e) => redirectToTees(e, product.teesLink, product.name);
+    detailTeesBtn.style.display = 'block';
+  } else {
+    detailTeesBtn.style.display = 'none';
+  }
+
+  // Show divider only if both buttons are visible
+  const hasTeepublic = product.teepublicLink && product.teepublicLink.trim() !== '';
+  const hasTees = product.teesLink && product.teesLink.trim() !== '';
+  if (hasTeepublic && hasTees) {
+    actionDivider.style.display = 'block';
+  } else {
+    actionDivider.style.display = 'none';
   }
 
   // Setup image gallery
@@ -117,6 +140,10 @@ function displayProductDetail() {
   }
 
   console.log('Product detail loaded:', product);
+  console.log('TeePublic Link:', product.teepublicLink);
+  console.log('Tees Link:', product.teesLink);
+  console.log('detailTeesBtn element:', detailTeesBtn);
+  console.log('detailTeesBtn display:', detailTeesBtn.style.display);
 }
 
 function selectProductImage(index) {

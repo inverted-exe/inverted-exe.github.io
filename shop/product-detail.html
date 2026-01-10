@@ -37,11 +37,6 @@
       <a href="/inverted.exe" class="nav-link profile-link" title="profile" aria-label="profile">
         <i class="ri-user-line"></i>
       </a>
-      <div class="lang-toggle">
-        <button class="lang-btn active" data-lang="en">ENG</button>
-        <span class="lang-separator">/</span>
-        <button class="lang-btn" data-lang="id">ID</button>
-      </div>
     </div>
   </header>
 
@@ -103,8 +98,12 @@
 
             <!-- Action Button -->
             <div class="detail-actions">
-              <button class="action-btn buy-on-teepublic" id="detailActionBtn">
-                <i class="ri-external-link-line"></i> buy on teepublic
+              <button class="action-btn buy-on-teepublic" id="detailTeepublicBtn" style="display:none;">
+                <i class="ri-external-link-line"></i> buy on teepublic for global
+              </button>
+              <div class="action-divider" id="actionDivider" style="display:none;">or</div>
+              <button class="action-btn buy-on-tees" id="detailTeesBtn" style="display:none;">
+                <i class="ri-external-link-line"></i> buy on tees for id
               </button>
             </div>
           </div>

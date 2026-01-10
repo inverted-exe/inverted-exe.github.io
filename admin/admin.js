@@ -92,6 +92,12 @@ function setupEventListeners() {
   document.getElementById('addShopBtn').addEventListener('click', () => openItemModal('shop'));
   document.getElementById('addGalleryBtn').addEventListener('click', () => openItemModal('gallery'));
 
+  // Sync button
+  const syncBtn = document.getElementById('syncBtn');
+  if (syncBtn) {
+    syncBtn.addEventListener('click', syncAllDataToFirebase);
+  }
+
   // Modal controls
   document.getElementById('modalClose').addEventListener('click', closeItemModal);
   document.getElementById('itemModal').addEventListener('click', (e) => {
@@ -230,6 +236,7 @@ function renderShopItems() {
         <div class="admin-item-meta">
           <span>💰 $${item.price || '0'}</span>
           ${item.teepublicLink ? `<span>🔗 teepublic linked</span>` : ''}
+          ${item.teesLink ? `<span>🛍️ tees.co.id linked</span>` : ''}
         </div>
       </div>
       <div class="admin-item-actions">
@@ -373,6 +380,10 @@ function openItemModal(type, itemIndex = null) {
       <div class="form-group">
         <label for="shopTeepublic">teepublic link</label>
         <input type="url" id="shopTeepublic" placeholder="https://teepublic.com/..." value="${item?.teepublicLink || ''}">
+      </div>
+      <div class="form-group">
+        <label for="shopTees">tees.co.id link</label>
+        <input type="url" id="shopTees" placeholder="https://tees.co.id/..." value="${item?.teesLink || ''}">
       </div>
       <div class="form-group">
         <label for="shopDesignBy">design by</label>
@@ -567,6 +578,7 @@ async function saveShopItem() {
   let images = [];
   const description = document.getElementById('shopDescription').value.trim();
   const teepublicLink = document.getElementById('shopTeepublic').value.trim();
+  const teesLink = document.getElementById('shopTees').value.trim();
   const designBy = document.getElementById('shopDesignBy').value.trim();
 
   // Use uploaded images data if available
@@ -600,6 +612,14 @@ async function saveShopItem() {
     return;
   }
 
+  // Get createdAt - handle case where it might be undefined
+  let createdAt;
+  if (currentEditingId !== null) {
+    createdAt = adminData.shop[currentEditingId]?.createdAt || new Date().toISOString();
+  } else {
+    createdAt = new Date().toISOString();
+  }
+
   const item = {
     id: currentEditingId !== null ? adminData.shop[currentEditingId].id : Date.now(),
     name,
@@ -608,12 +628,18 @@ async function saveShopItem() {
     image: images[0], // Keep first image as primary for backward compatibility
     description,
     teepublicLink,
+    teesLink,
     designBy,
-    createdAt: currentEditingId !== null ? adminData.shop[currentEditingId].createdAt : new Date().toISOString(),
+    createdAt: createdAt,
     updatedAt: new Date().toISOString()
   };
 
   try {
+    // Validate all required fields are not undefined
+    if (item.createdAt === undefined) {
+      throw new Error('createdAt is undefined');
+    }
+
     if (currentEditingId !== null) {
       // Update existing
       adminData.shop[currentEditingId] = item;
@@ -622,8 +648,25 @@ async function saveShopItem() {
       adminData.shop.push(item);
     }
 
+    // Clean up any undefined values in the entire shop array before saving
+    const cleanedShop = adminData.shop.map(shopItem => {
+      return {
+        id: shopItem.id,
+        name: shopItem.name || '',
+        price: shopItem.price || 0,
+        images: shopItem.images || [],
+        image: shopItem.image || '',
+        description: shopItem.description || '',
+        teepublicLink: shopItem.teepublicLink || '',
+        teesLink: shopItem.teesLink || '',
+        designBy: shopItem.designBy || '',
+        createdAt: shopItem.createdAt || new Date().toISOString(),
+        updatedAt: shopItem.updatedAt || new Date().toISOString()
+      };
+    });
+
     // Save to Firebase
-    await db.ref('content/shop').set(adminData.shop);
+    await db.ref('content/shop').set(cleanedShop);
     
     // Clear image data
     window.shopImagesData = [];
@@ -818,4 +861,92 @@ function showNotification(message, type = 'success') {
   setTimeout(() => {
     notification.remove();
   }, 3000);
+}
+
+// SYNC ALL DATA TO FIREBASE
+async function syncAllDataToFirebase() {
+  const syncBtn = document.getElementById('syncBtn');
+  
+  try {
+    // Set button to loading state
+    syncBtn.classList.add('syncing');
+    syncBtn.disabled = true;
+    
+    showNotification('Syncing all data to Firebase...', 'info');
+
+    // Clean all data before upload
+    const cleanedData = {
+      shop: [],
+      archive: [],
+      gallery: []
+    };
+
+    // Clean shop items
+    if (adminData.shop && Array.isArray(adminData.shop)) {
+      cleanedData.shop = adminData.shop.map(item => ({
+        id: item.id,
+        name: item.name || '',
+        price: item.price || 0,
+        images: Array.isArray(item.images) ? item.images : (item.image ? [item.image] : []),
+        image: item.image || '',
+        description: item.description || '',
+        teepublicLink: item.teepublicLink || '',
+        teesLink: item.teesLink || '',
+        designBy: item.designBy || '',
+        createdAt: item.createdAt || new Date().toISOString(),
+        updatedAt: item.updatedAt || new Date().toISOString()
+      }));
+    }
+
+    // Clean archive items
+    if (adminData.archive && Array.isArray(adminData.archive)) {
+      cleanedData.archive = adminData.archive.map(item => ({
+        id: item.id,
+        name: item.name || '',
+        price: item.price || 0,
+        images: Array.isArray(item.images) ? item.images : (item.image ? [item.image] : []),
+        image: item.image || '',
+        description: item.description || '',
+        teepublicLink: item.teepublicLink || '',
+        teesLink: item.teesLink || '',
+        designBy: item.designBy || '',
+        createdAt: item.createdAt || new Date().toISOString(),
+        updatedAt: item.updatedAt || new Date().toISOString()
+      }));
+    }
+
+    // Clean gallery items
+    if (adminData.gallery && Array.isArray(adminData.gallery)) {
+      cleanedData.gallery = adminData.gallery.map(item => ({
+        id: item.id,
+        title: item.title || '',
+        image: item.image || '',
+        createdAt: item.createdAt || new Date().toISOString()
+      }));
+    }
+
+    // Upload to Firebase
+    if (typeof db !== 'undefined') {
+      // Upload each section
+      await db.ref('content/shop').set(cleanedData.shop);
+      await db.ref('content/archive').set(cleanedData.archive);
+      await db.ref('content/gallery').set(cleanedData.gallery);
+
+      // Save to localStorage too
+      localStorage.setItem('inverted_admin_data', JSON.stringify(cleanedData));
+      localStorage.setItem('inverted_last_sync', new Date().toISOString());
+
+      showNotification('✅ All data synced to Firebase successfully!', 'success');
+      console.log('Firebase sync completed:', cleanedData);
+    } else {
+      throw new Error('Firebase not initialized');
+    }
+  } catch (error) {
+    console.error('Error syncing to Firebase:', error);
+    showNotification('Failed to sync to Firebase: ' + error.message, 'error');
+  } finally {
+    // Reset button state
+    syncBtn.classList.remove('syncing');
+    syncBtn.disabled = false;
+  }
 }
