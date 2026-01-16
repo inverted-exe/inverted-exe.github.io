@@ -1,0 +1,6 @@
+{
+  "hosting": {
+    "site": "inverted-exe",
+    "public": "public",
+  }
+}
